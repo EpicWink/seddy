@@ -15,7 +15,11 @@ except pkg_resources.DistributionNotFound:
 def _setup_logging(verbose: int):  # pragma: no cover
     lg.addLevelName(25, "NOTICE")
     levels = {
-        -3: lg.CRITICAL, -2: lg.ERROR, -1: lg.WARNING, 0: 25, 1: lg.INFO, 2: lg.DEBUG
+        -2: lg.ERROR,
+        -1: lg.WARNING,
+        0: 25,
+        1: lg.INFO,
+        2: lg.DEBUG,
     }
     level = levels.get(verbose, lg.CRITICAL if verbose < 0 else lg.NOTSET)
     fmt = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
@@ -35,7 +39,7 @@ def _setup_logging(verbose: int):  # pragma: no cover
             level_styles={
                 **coloredlogs.DEFAULT_LEVEL_STYLES,
                 "notice": {},
-                "info": {"color": "white"}
+                "info": {"color": "white"},
             },
             milliseconds=True,
         )
@@ -44,6 +48,7 @@ def _setup_logging(verbose: int):  # pragma: no cover
 
 def _run_app(args: argparse.Namespace):  # pragma: no cover
     from . import app
+
     _setup_logging(args.verbose - args.quiet)
     app.run_app(args.decider_json, args.domain, args.task_list)
 

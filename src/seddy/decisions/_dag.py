@@ -96,15 +96,13 @@ class DAGBuilder(_base.DecisionsBuilder):  # TODO: unit-test
             result = {}
             for activity_id, events in self._activity_task_events.items():
                 assert events and events[-1]["eventType"] == "ActivityTaskCompleted"
-                result[activity_id] = (
-                    events[-1]["ActivityTaskCompletedEventAttributes"]["result"]
-                )
+                result[activity_id] = events[-1][
+                    "ActivityTaskCompletedEventAttributes"
+                ]["result"]
             self.decisions = [
                 {
                     "decisionType": "CompleteWorkflowExecution",
-                    "CompleteWorkflowExecutionDecisionAttributes": {
-                        "result": result
-                    },
+                    "CompleteWorkflowExecutionDecisionAttributes": {"result": result},
                 },
             ]
             return True
@@ -115,9 +113,8 @@ class DAGBuilder(_base.DecisionsBuilder):  # TODO: unit-test
                 "decisionType": "FailWorkflowExecution",
                 "failWorkflowExecutionDecisionAttributes": {
                     "reason": "activityFailure",
-                    "details": "Activity '%s' failed" % (
-                        self._scheduled[event["eventId"]]["activityId"]
-                    ),
+                    "details": "Activity '%s' failed"
+                    % (self._scheduled[event["eventId"]]["activityId"]),
                 },
             },
         ]
@@ -128,9 +125,8 @@ class DAGBuilder(_base.DecisionsBuilder):  # TODO: unit-test
                 "decisionType": "FailWorkflowExecution",
                 "failWorkflowExecutionDecisionAttributes": {
                     "reason": "activityTimeOut",
-                    "details": "Activity '%s' timed-out" % (
-                        self._scheduled[event["eventId"]]["activityId"]
-                    ),
+                    "details": "Activity '%s' timed-out"
+                    % (self._scheduled[event["eventId"]]["activityId"]),
                 },
             },
         ]
@@ -140,14 +136,15 @@ class DAGBuilder(_base.DecisionsBuilder):  # TODO: unit-test
         for activity_task in self.workflow.spec["tasks"]:
             events = self._activity_task_events[activity_task["id"]]
             if events and events[-1]["eventType"] in (
-                    "ActivityTaskScheduled", "ActivityTaskStarted"
+                "ActivityTaskScheduled",
+                "ActivityTaskStarted",
             ):
                 decisions.append(
                     {
                         "decisionType": "RequestCancelActivityTask",
                         "RequestCancelActivityTaskDecisionAttributes": {
                             "activityId": activity_task["id"]
-                        }
+                        },
                     }
                 )
         decisions.append(
@@ -197,6 +194,7 @@ class DAGBuilder(_base.DecisionsBuilder):  # TODO: unit-test
 
 class DAG(_base.Workflow):  # TODO: unit-test
     """Dag-type SWF workflow specification."""
+
     spec_type = "dag"
     decisions_builder = DAGBuilder
 

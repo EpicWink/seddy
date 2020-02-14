@@ -27,10 +27,7 @@ class Decider:  # TODO: unit-test
     """
 
     def __init__(
-        self,
-        workflows: t.List[seddy_decisions.Workflow],
-        domain: str,
-        task_list: str,
+        self, workflows: t.List[seddy_decisions.Workflow], domain: str, task_list: str,
     ):
         self.workflows = workflows
         self.domain = domain
