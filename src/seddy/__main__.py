@@ -12,7 +12,7 @@ except pkg_resources.DistributionNotFound:
     version = None
 
 
-def _setup_logging(verbose: int):  # pragma: no cover
+def setup_logging(verbose: int):  # TODO: unit-test
     lg.addLevelName(25, "NOTICE")
     levels = {
         -2: lg.ERROR,
@@ -46,14 +46,14 @@ def _setup_logging(verbose: int):  # pragma: no cover
         lg.root.setLevel(level)
 
 
-def _run_app(args: argparse.Namespace):  # pragma: no cover
+def run_app(args: argparse.Namespace):  # TODO: unit-test
     from . import app
 
-    _setup_logging(args.verbose - args.quiet)
+    setup_logging(args.verbose - args.quiet)
     app.run_app(args.decider_json, args.domain, args.task_list)
 
 
-def main():  # pragma: no cover
+def build_parser():  # TODO: unit-test
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "decider_json", type=pathlib.Path, help="decider specification JSON"
@@ -67,8 +67,13 @@ def main():  # pragma: no cover
         "-q", "--quiet", action="count", default=0, help="decrease logging verbosity"
     )
     parser.add_argument("-V", "--version", action="version", version=version)
+    return parser
+
+
+def main():  # pragma: no cover
+    parser = build_parser()
     args = parser.parse_args()
-    _run_app(args)
+    run_app(args)
 
 
 if __name__ == "__main__":  # pragma: no cover
