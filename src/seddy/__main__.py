@@ -4,6 +4,13 @@ import pathlib
 import argparse
 import logging as lg
 
+import pkg_resources
+
+try:
+    version = pkg_resources.get_distribution("sitesee-seddy").version
+except pkg_resources.DistributionNotFound:
+    version = None
+
 
 def _setup_logging(verbose: int):  # pragma: no cover
     level = lg.INFO - (lg.INFO - lg.DEBUG) * verbose
@@ -30,6 +37,7 @@ def main():  # pragma: no cover
     parser.add_argument(
         "-q", "--quiet", action="count", default=0, help="decrease logging verbosity"
     )
+    parser.add_argument("-V", "--version", action="version", version=version)
     args = parser.parse_args()
     _run_app(args)
 
