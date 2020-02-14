@@ -212,8 +212,3 @@ class DAG(_base.Workflow):
 
     def setup(self):
         self._build_dependants()
-
-
-WORKFLOW = {
-    DAG.spec_type: DAG,
-}
