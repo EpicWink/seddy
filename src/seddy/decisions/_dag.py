@@ -69,7 +69,7 @@ class DAGBuilder(_base.DecisionsBuilder):
                     )
 
     def _get_activity_task_events(self):
-        for event in reversed(self.task["events"]):  # events are newest-first
+        for event in self.task["events"]:
             if event["eventType"] in _at_attr_keys:
                 scheduled_event = self._scheduled[event["eventId"]]
                 attrs = scheduled_event["activityTaskScheduledEventAttributes"]
@@ -90,7 +90,7 @@ class DAGBuilder(_base.DecisionsBuilder):
                     dependencies_satisfied = False
                     break
             if dependencies_satisfied:
-                self._schedule_task(activity_task, self.task["events"][-1])
+                self._schedule_task(activity_task, self.task["events"][0])
 
         # Complete workflow
         tasks_complete = True
@@ -166,18 +166,23 @@ class DAGBuilder(_base.DecisionsBuilder):
         self.decisions = decisions
 
     def _process_workflow_execution_started_event(self, event: t.Dict[str, t.Any]):
-        assert event is self.task["events"][1]
+        assert event is self.task["events"][0]
         for activity_task in self.workflow.spec["tasks"]:
             assert not self._activity_task_events[activity_task["id"]]
-            if not activity_task["dependencies"]:
+            if not activity_task.get("dependencies"):
                 self._schedule_task(activity_task, event)
 
     def _process_new_events(self):
-        assert self.task["events"][0]["eventType"] == "DecisionTaskScheduled"
-        for event in self.task["events"][1:]:
-            if event["eventType"] == "DecisionTaskStarted":
-                break  # all older events are already processed
-            elif event["eventType"] == "ActivityTaskCompleted":
+        event_ids = [event["eventId"] for event in self.task["events"]]
+        current_idx = event_ids.index(self.task["startedEventId"])
+        previous_idx = -1
+        if self.task["previousStartedEventId"] in event_ids:
+            previous_idx = event_ids.index(self.task["previousStartedEventId"])
+        events = self.task["events"][previous_idx + 1:current_idx + 1]
+        assert self.task["events"][-1]["eventType"] == "DecisionTaskStarted"
+        assert self.task["events"][-2]["eventType"] == "DecisionTaskScheduled"
+        for event in events[:-2]:
+            if event["eventType"] == "ActivityTaskCompleted":
                 if self._process_activity_task_completed_event(event):
                     break
             elif event["eventType"] == "ActivityTaskFailed":
