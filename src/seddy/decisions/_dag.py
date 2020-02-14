@@ -1,5 +1,6 @@
 """SWF decisions making."""
 
+import json
 import typing as t
 
 from . import _base
@@ -36,16 +37,18 @@ class DAGBuilder(_base.DecisionsBuilder):
         decision_attributes = {
             "activityId": activity_task["id"],
             "activityType": activity_task["type"],
-            "input": workflow_started_event["input"][activity_task["id"]],
         }
+        input_ = json.loads(attrs.get("input", "null"))
+        if input_:
+            decision_attributes["input"] = json.dumps(input_[activity_task["id"]])
         if "heartbeat" in activity_task:
-            decision_attributes["heartbeatTimeout"] = activity_task["hearbeat"]
+            decision_attributes["heartbeatTimeout"] = str(activity_task["heartbeat"])
         if "timeout" in activity_task:
-            decision_attributes["startToCloseTimeout"] = activity_task["timeout"]
+            decision_attributes["startToCloseTimeout"] = str(activity_task["timeout"])
         if "task_list" in activity_task:
             decision_attributes["taskList"] = activity_task["task_list"]
         if "priority" in activity_task:
-            decision_attributes["taskPriority"] = activity_task["priority"]
+            decision_attributes["taskPriority"] = str(activity_task["priority"])
         self.decisions.append(
             {
                 "decisionType": "ScheduleActivityTask",
@@ -99,15 +102,15 @@ class DAGBuilder(_base.DecisionsBuilder):
             result = {}
             for activity_id, events in self._activity_task_events.items():
                 assert events and events[-1]["eventType"] == "ActivityTaskCompleted"
-                result[activity_id] = events[-1][
-                    "activityTaskCompletedEventAttributes"
-                ]["result"]
-            self.decisions = [
-                {
-                    "decisionType": "CompleteWorkflowExecution",
-                    "completeWorkflowExecutionDecisionAttributes": {"result": result},
-                },
-            ]
+                attrs = events[-1].get("activityTaskCompletedEventAttributes")
+                if attrs and "result" in attrs:
+                    result[activity_id] = json.loads(attrs["result"])
+            decision = {"decisionType": "CompleteWorkflowExecution"}
+            if result:
+                decision["completeWorkflowExecutionDecisionAttributes"] = {
+                    "result": json.dumps(result)
+                }
+            self.decisions = [decision]
             return True
 
     def _process_activity_task_failed_event(self, event: t.Dict[str, t.Any]):
