@@ -103,7 +103,20 @@ def make_decisions_dag(  # TODO: unit-test
                 if not events or events[-1]["eventType"] != "ActivityTaskCompleted":
                     break
             else:
-                return [{"decisionType": "CompleteWorkflowExecution"}]
+                result = {}
+                for activity_id, events in activity_task_events.items():
+                    assert events and events[-1]["eventType"] == "ActivityTaskCompleted"
+                    result[activity_id] = (
+                        events[-1]["ActivityTaskCompletedEventAttributes"]["result"]
+                    )
+                return [
+                    {
+                        "decisionType": "CompleteWorkflowExecution",
+                        "CompleteWorkflowExecutionDecisionAttributes": {
+                            "result": result
+                        },
+                    },
+                ]
         elif event["eventType"] == "ActivityTaskFailed":
             return [
                 {
