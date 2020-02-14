@@ -17,7 +17,7 @@ class Decider:  # TODO: unit-test
     """SWF decider.
 
     Args:
-        spec: decider specification
+        workflows: decider workflows
         domain: SWF domain to poll in
         task_list: SWF decider task-list
 
@@ -26,8 +26,13 @@ class Decider:  # TODO: unit-test
         identity: name of decider to poll as
     """
 
-    def __init__(self, spec: t.Dict[str, t.Any], domain: str, task_list: str):
-        self.spec = spec
+    def __init__(
+        self,
+        workflows: t.List[seddy_decisions.Workflow],
+        domain: str,
+        task_list: str,
+    ):
+        self.workflows = workflows
         self.domain = domain
         self.task_list = task_list
         self.client = boto3.client("swf")
@@ -69,16 +74,11 @@ class Decider:  # TODO: unit-test
             workflow decisions
         """
 
-        assert tuple(map(int, self.spec["version"].split("."))) > (1,)
-        workflow_ids = [(w["name"], w["version"]) for w in self.spec["workflows"]]
+        workflow_ids = [(w.spec["name"], w.spec["version"]) for w in self.workflows]
         task_id = (task["workflowType"]["name"], task["workflowType"]["version"])
         idx = workflow_ids.index(task_id)
-        spec = self.spec["workflows"][idx]
-
-        if spec["spec_type"] == "dag":
-            return seddy_decisions.make_decisions_dag(task, spec)
-        else:
-            raise ValueError(self.spec)
+        workflow = self.workflows[idx]
+        return workflow.make_decisions(task)
 
     def _respond_decision_task_completed(
         self, decisions: t.List[t.Dict[str, t.Any]], task: t.Dict[str, t.Any]
