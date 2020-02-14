@@ -137,7 +137,7 @@ class DAGBuilder(_base.DecisionsBuilder):
             },
         ]
 
-    def _process_cancel_requested_event(self, event: t.Dict[str, t.Any]):
+    def _process_cancel_requested_event(self):
         decisions = []
         for activity_task in self.workflow.spec["tasks"]:
             events = self._activity_task_events[activity_task["id"]]
@@ -153,16 +153,7 @@ class DAGBuilder(_base.DecisionsBuilder):
                         },
                     }
                 )
-        decisions.append(
-            {
-                "decisionType": "CancelWorkflowExecution",
-                "CancelWorkflowExecutionDecisionAttributes": {
-                    "details": event["workflowExecutionCancelRequestedEventAttributes"][
-                        "cause"
-                    ]
-                },
-            },
-        )
+        decisions.append({"decisionType": "CancelWorkflowExecution"})
         self.decisions = decisions
 
     def _process_workflow_execution_started_event(self, event: t.Dict[str, t.Any]):
@@ -192,7 +183,7 @@ class DAGBuilder(_base.DecisionsBuilder):
                 self._process_activity_task_timed_out_event(event)
                 break
             elif event["eventType"] == "WorkflowExecutionCancelRequested":
-                self._process_cancel_requested_event(event)
+                self._process_cancel_requested_event()
                 break
             elif event["eventType"] == "WorkflowExecutionStarted":
                 self._process_workflow_execution_started_event(event)
