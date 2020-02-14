@@ -18,7 +18,7 @@ def _get(item_id, items, id_key):
     return next(item for item in items if item[id_key] == item_id)
 
 
-class DAGBuilder(_base.DecisionsBuilder):  # TODO: unit-test
+class DAGBuilder(_base.DecisionsBuilder):
     """SWF decision builder from DAG-type workflow specification."""
 
     def __init__(self, workflow, task):
@@ -192,7 +192,7 @@ class DAGBuilder(_base.DecisionsBuilder):  # TODO: unit-test
         self._process_new_events()
 
 
-class DAG(_base.Workflow):  # TODO: unit-test
+class DAG(_base.Workflow):
     """Dag-type SWF workflow specification."""
 
     spec_type = "dag"

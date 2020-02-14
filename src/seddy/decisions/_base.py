@@ -4,7 +4,7 @@ import abc
 import typing as t
 
 
-class DecisionsBuilder(metaclass=abc.ABCMeta):  # TODO: unit-test
+class DecisionsBuilder(metaclass=abc.ABCMeta):
     """SWF decision builder.
 
     Args:
@@ -18,12 +18,12 @@ class DecisionsBuilder(metaclass=abc.ABCMeta):  # TODO: unit-test
         self.decisions = []
 
     @abc.abstractmethod
-    def build_decisions(self):
+    def build_decisions(self):  # pragma: no cover
         """Build decisions from workflow history."""
         raise NotImplementedError
 
 
-class Workflow(metaclass=abc.ABCMeta):  # TODO: unit-test
+class Workflow(metaclass=abc.ABCMeta):
     """SWF workflow specification.
 
     Args:
@@ -35,12 +35,12 @@ class Workflow(metaclass=abc.ABCMeta):  # TODO: unit-test
 
     @property
     @abc.abstractmethod
-    def decisions_builder(self) -> DecisionsBuilder:
+    def decisions_builder(self) -> DecisionsBuilder:  # pragma: no cover
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
-    def spec_type(self) -> str:
+    def spec_type(self) -> str:  # pragma: no cover
         raise NotImplementedError
 
     def setup(self):

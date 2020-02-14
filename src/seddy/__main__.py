@@ -8,11 +8,11 @@ import pkg_resources
 
 try:
     version = pkg_resources.get_distribution("sitesee-seddy").version
-except pkg_resources.DistributionNotFound:
+except pkg_resources.DistributionNotFound:  # pragma: no cover
     version = None
 
 
-def setup_logging(verbose: int):  # TODO: unit-test
+def setup_logging(verbose: int):
     lg.addLevelName(25, "NOTICE")
     levels = {
         -2: lg.ERROR,
@@ -46,14 +46,14 @@ def setup_logging(verbose: int):  # TODO: unit-test
         lg.root.setLevel(level)
 
 
-def run_app(args: argparse.Namespace):  # TODO: unit-test
+def run_app(args: argparse.Namespace):
     from . import app
 
     setup_logging(args.verbose - args.quiet)
     app.run_app(args.decider_json, args.domain, args.task_list)
 
 
-def build_parser():  # TODO: unit-test
+def build_parser():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "decider_json", type=pathlib.Path, help="decider specification JSON"

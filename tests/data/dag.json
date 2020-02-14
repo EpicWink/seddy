@@ -12,10 +12,10 @@
                         "name": "spam-foo",
                         "version": "0.3"
                     },
-                    "heartbeat": "60",
-                    "timeout": "86400",
+                    "heartbeat": 60,
+                    "timeout": 86400,
                     "task_list": "eggs",
-                    "priority": "1"
+                    "priority": 1
                 },
                 {
                     "id": "bar",
@@ -23,9 +23,9 @@
                         "name": "spam-bar",
                         "version": "0.1"
                     },
-                    "heartbeat": "60",
-                    "timeout": "86400",
-                    "dependencies": "foo"
+                    "heartbeat": 60,
+                    "timeout": 86400,
+                    "dependencies": ["foo"]
                 },
                 {
                     "id": "yay",
@@ -33,9 +33,9 @@
                         "name": "spam-foo",
                         "version": "0.3"
                     },
-                    "heartbeat": "60",
-                    "timeout": "86400",
-                    "dependencies": "foo"
+                    "heartbeat": 60,
+                    "timeout": 86400,
+                    "dependencies": ["foo"]
                 }
             ]
         }

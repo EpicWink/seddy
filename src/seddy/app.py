@@ -8,7 +8,7 @@ from . import decider as seddy_decider
 from . import decisions as seddy_decisions
 
 
-def setup_workflows(  # TODO: unit-test
+def setup_workflows(
     decider_spec: t.Dict[str, t.Any]
 ) -> t.List[seddy_decisions.Workflow]:
     """Set-up decider workflows.
@@ -29,7 +29,7 @@ def setup_workflows(  # TODO: unit-test
     return workflows
 
 
-def run_app(decider_spec_json: pathlib.Path, domain: str, task_list: str):  # TODO: unit-test
+def run_app(decider_spec_json: pathlib.Path, domain: str, task_list: str):
     """Run decider application.
 
     Arguments:

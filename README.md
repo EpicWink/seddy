@@ -29,6 +29,6 @@ pydoc3 seddy
 
 ## Running tests
 ```bash
-pip3 install -r tests/requirements.txt
+pip3 install . -r tests/requirements.txt
 pytest -vvra --cov=sitesegment
 ```

@@ -13,7 +13,7 @@ logger = lg.getLogger(__name__)
 socket.setdefaulttimeout(70.0)
 
 
-class Decider:  # TODO: unit-test
+class Decider:
     """SWF decider.
 
     Args:
@@ -56,7 +56,7 @@ class Decider:  # TODO: unit-test
             taskList={"name": self.task_list},
             **kwargs,
         )
-        if resp.get("nextPageToken"):
+        if resp.get("nextPageToken"):  # pragma: no cover
             new_resp = self._poll_for_decision_task(resp.pop("nextPageToken"))
             resp["events"].extend(new_resp["events"])
         return resp
