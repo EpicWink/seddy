@@ -104,7 +104,8 @@ class Decider:  # TODO: unit-test
         task = self._poll_for_decision_task()
         if not task["taskToken"]:
             return
-        logger.info(
+        logger.log(
+            25,
             "Got decision task '%s' for workflow '%s-%s' execution '%s' (run '%s')",
             task["taskToken"],
             task["workflowType"]["name"],
@@ -117,7 +118,8 @@ class Decider:  # TODO: unit-test
 
     def _run_uncaught(self):
         """Run decider."""
-        logger.info(
+        logger.log(
+            25,
             "Polling for tasks in domain '%s' with task-list '%s' as '%s'",
             self.domain,
             self.task_list,

@@ -13,7 +13,11 @@ except pkg_resources.DistributionNotFound:
 
 
 def _setup_logging(verbose: int):  # pragma: no cover
-    level = lg.INFO - (lg.INFO - lg.DEBUG) * verbose
+    lg.addLevelName(25, "NOTICE")
+    levels = {
+        -3: lg.CRITICAL, -2: lg.ERROR, -1: lg.WARNING, 0: 25, 1: lg.INFO, 2: lg.DEBUG
+    }
+    level = levels.get(verbose, lg.CRITICAL if verbose < 0 else lg.NOTSET)
     fmt = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
     try:
         import coloredlogs
@@ -28,6 +32,12 @@ def _setup_logging(verbose: int):  # pragma: no cover
                 "levelname": {"bold": True, "color": "blue"},
                 "name": {"bold": True, "color": "yellow"},
             },
+            level_styles={
+                **coloredlogs.DEFAULT_LEVEL_STYLES,
+                "notice": {},
+                "info": {"color": "white"}
+            },
+            milliseconds=True,
         )
         lg.root.setLevel(level)
 
