@@ -15,7 +15,21 @@ except pkg_resources.DistributionNotFound:
 def _setup_logging(verbose: int):  # pragma: no cover
     level = lg.INFO - (lg.INFO - lg.DEBUG) * verbose
     fmt = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
-    lg.basicConfig(level=level, format=fmt)
+    try:
+        import coloredlogs
+    except ImportError:
+        lg.basicConfig(level=level, format=fmt)
+    else:
+        coloredlogs.install(
+            level=level,
+            fmt=fmt,
+            field_styles={
+                "asctime": {"faint": True, "color": "white"},
+                "levelname": {"bold": True, "color": "blue"},
+                "name": {"bold": True, "color": "yellow"},
+            },
+        )
+        lg.root.setLevel(level)
 
 
 def _run_app(args: argparse.Namespace):  # pragma: no cover

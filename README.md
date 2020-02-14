@@ -11,6 +11,11 @@ Multi-workflow SWF decider service.
 pip3 install sitesee-seddy
 ```
 
+For coloured logging
+```bash
+pip3 install coloredlogs
+```
+
 ## Usage
 Get the CLI usage
 ```bash
