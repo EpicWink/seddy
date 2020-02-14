@@ -5,11 +5,11 @@ import typing as t
 from . import _base
 
 _at_attr_keys = {
-    "ActivityTaskCompleted": "ActivityTaskCompletedEventAttributes",
-    "ActivityTaskFailed": "ActivityTaskFailedEventAttributes",
-    "ActivityTaskTimedOut": "ActivityTaskTimedOutEventAttributes",
-    "ActivityTaskScheduled": "ActivityTaskScheduledEventAttributes",
-    "ActivityTaskStarted": "ActivityTaskStartedEventAttributes",
+    "ActivityTaskCompleted": "activityTaskCompletedEventAttributes",
+    "ActivityTaskFailed": "activityTaskFailedEventAttributes",
+    "ActivityTaskTimedOut": "activityTaskTimedOutEventAttributes",
+    "ActivityTaskScheduled": "activityTaskScheduledEventAttributes",
+    "ActivityTaskStarted": "activityTaskStartedEventAttributes",
 }
 
 
@@ -97,12 +97,12 @@ class DAGBuilder(_base.DecisionsBuilder):
             for activity_id, events in self._activity_task_events.items():
                 assert events and events[-1]["eventType"] == "ActivityTaskCompleted"
                 result[activity_id] = events[-1][
-                    "ActivityTaskCompletedEventAttributes"
+                    "activityTaskCompletedEventAttributes"
                 ]["result"]
             self.decisions = [
                 {
                     "decisionType": "CompleteWorkflowExecution",
-                    "CompleteWorkflowExecutionDecisionAttributes": {"result": result},
+                    "completeWorkflowExecutionDecisionAttributes": {"result": result},
                 },
             ]
             return True
@@ -142,7 +142,7 @@ class DAGBuilder(_base.DecisionsBuilder):
                 decisions.append(
                     {
                         "decisionType": "RequestCancelActivityTask",
-                        "RequestCancelActivityTaskDecisionAttributes": {
+                        "requestCancelActivityTaskDecisionAttributes": {
                             "activityId": activity_task["id"]
                         },
                     }
@@ -151,7 +151,7 @@ class DAGBuilder(_base.DecisionsBuilder):
             {
                 "decisionType": "CancelWorkflowExecution",
                 "CancelWorkflowExecutionDecisionAttributes": {
-                    "details": event["WorkflowExecutionCancelRequestedEventAttributes"][
+                    "details": event["workflowExecutionCancelRequestedEventAttributes"][
                         "cause"
                     ]
                 },
