@@ -162,8 +162,24 @@ class TestDecider:
         # Check result
         assert res is workflow_mocks[1].make_decisions.return_value
 
+    @pytest.fixture
+    def patch_moto_swf(self):
+        """Temporarily patch ``moto`` to fix closed execution info."""
+        from moto.swf import models
+
+        class WorkflowExecution(models.WorkflowExecution):
+            def to_full_dict(self):
+                hsh = super().to_full_dict()
+                if self.execution_status == "CLOSED":
+                    hsh["executionInfo"]["closeStatus"] = self.close_status
+                    hsh["executionInfo"]["closeTimestamp"] = self.close_timestamp
+                return hsh
+
+        with mock.patch.object(models, "WorkflowExecution", WorkflowExecution):
+            yield
+
     @moto.mock_swf
-    def test_respond_decision_task_completed(self, instance):
+    def test_respond_decision_task_completed(self, instance, patch_moto_swf):
         # Setup environment
         instance.client.register_domain(
             name="spam", workflowExecutionRetentionPeriodInDays="2"
