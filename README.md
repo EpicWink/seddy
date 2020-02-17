@@ -4,12 +4,14 @@ https://github.com/EpicWink/swf-decider/workflows/test/badge.svg?branch=master)
 
 Multi-workflow SWF decider service.
 
-## Installation
-Prerequisites:
-* [Python 3](https://python.org/) for pythonic reasons
-* AWS credentials
+Features:
+* Start a decider on many workflows
+* Specify a directed graph (aka DAG) of activity (via dependencies) tasks in the
+  workflow
+* Supports coloured logging
+* Extensible decision-building: just subclass `seddy.decisions.DecisionsBuilder`
 
-Installation:
+## Installation
 ```bash
 pip3 install seddy
 ```
@@ -29,3 +31,5 @@ API documentation
 ```bash
 pydoc3 seddy
 ```
+
+See [the example DAG workflow definition](tests/data/dag.json).
