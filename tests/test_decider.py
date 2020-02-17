@@ -29,15 +29,18 @@ class TestDecider:
         return workflows
 
     @pytest.fixture
-    def instance(self, workflow_mocks):
+    def aws_environment(self):
         env_update = {
             "AWS_DEFAULT_REGION": "us-east-1",
             "AWS_ACCESS_KEY_ID": "id",
             "AWS_SECRET_ACCESS_KEY": "key",
         }
-        env_patch = mock.patch.dict(os.environ, env_update)
-        with env_patch:
-            yield seddy_decider.Decider(workflow_mocks, "spam", "eggs")
+        with mock.patch.dict(os.environ, env_update):
+            yield env_update
+
+    @pytest.fixture
+    def instance(self, workflow_mocks, aws_environment):
+        return seddy_decider.Decider(workflow_mocks, "spam", "eggs")
 
     def test_init(self, instance, workflow_mocks):
         assert instance.workflows == workflow_mocks
@@ -194,7 +197,7 @@ class TestDecider:
         assert execution_info["executionInfo"]["executionStatus"] == "CLOSED"
         assert execution_info["executionInfo"]["closeStatus"] == "COMPLETED"
 
-    def test_poll_and_run(self, workflow_mocks):
+    def test_poll_and_run(self, workflow_mocks, aws_environment):
         # Setup environment
         task = {
             "taskToken": "spam",
@@ -221,7 +224,7 @@ class TestDecider:
             [{"decisionType": "CompleteWorkflowExecution"}], task
         )
 
-    def test_poll_and_run_no_result(self, workflow_mocks):
+    def test_poll_and_run_no_result(self, workflow_mocks, aws_environment):
         # Setup environment
         class Decider(seddy_decider.Decider):
             _poll_for_decision_task = mock.Mock(return_value={"taskToken": ""})
@@ -238,7 +241,7 @@ class TestDecider:
         instance._make_decisions.assert_not_called()
         instance._respond_decision_task_completed.assert_not_called()
 
-    def test_run_uncaught(self, workflow_mocks):
+    def test_run_uncaught(self, workflow_mocks, aws_environment):
         # Setup environment
         class Decider(seddy_decider.Decider):
             _poll_and_run = mock.Mock(side_effect=[None, None, None, KeyboardInterrupt])
@@ -252,7 +255,7 @@ class TestDecider:
         # Check calls
         assert instance._poll_and_run.call_args_list == [mock.call()] * 4
 
-    def test_run(self, workflow_mocks):
+    def test_run(self, workflow_mocks, aws_environment):
         # Setup environment
         class Decider(seddy_decider.Decider):
             _run_uncaught = mock.Mock(side_effect=KeyboardInterrupt)
