@@ -1,4 +1,6 @@
 # seddy
+![Build status](
+https://github.com/EpicWink/swf-decider/workflows/test/badge.svg?branch=master)
 Multi-workflow SWF decider service.
 
 ## Getting Started
