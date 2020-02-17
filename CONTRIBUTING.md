@@ -32,7 +32,6 @@ sphinx-apidoc -ef -o docs/src/ src/seddy/ --ext-autodoc
 To build the documentation:
 ```bash
 cd docs/
-pip3 install -r requirements.txt
 make
 ```
 
