@@ -1,5 +1,6 @@
 """Test ``seddy.decider``."""
 
+import os
 import socket
 from unittest import mock
 
@@ -29,7 +30,14 @@ class TestDecider:
 
     @pytest.fixture
     def instance(self, workflow_mocks):
-        return seddy_decider.Decider(workflow_mocks, "spam", "eggs")
+        env_update = {
+            "AWS_DEFAULT_REGION": "us-east-1",
+            "AWS_ACCESS_KEY_ID": "id",
+            "AWS_SECRET_ACCESS_KEY": "key",
+        }
+        env_patch = mock.patch.dict(os.environ, env_update)
+        with env_patch:
+            yield seddy_decider.Decider(workflow_mocks, "spam", "eggs")
 
     def test_init(self, instance, workflow_mocks):
         assert instance.workflows == workflow_mocks
