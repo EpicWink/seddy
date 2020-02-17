@@ -1,6 +1,8 @@
 # seddy
 ![Build status](
 https://github.com/EpicWink/seddy/workflows/test/badge.svg?branch=master)
+[![codecov](https://codecov.io/gh/EpicWink/seddy/branch/master/graph/badge.svg)](
+https://codecov.io/gh/EpicWink/seddy)
 
 Multi-workflow SWF decider service.
 
