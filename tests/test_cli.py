@@ -116,7 +116,7 @@ def test_version(decider_mock, command_line_args, capsys):
 
     # Check output
     res_out = capsys.readouterr().out
-    assert res_out.strip() == pkg_resources.get_distribution("sitesee-seddy").version
+    assert res_out.strip() == pkg_resources.get_distribution("seddy").version
 
 
 def test_decider(decider_mock, tmp_path):

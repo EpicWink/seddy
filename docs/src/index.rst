@@ -9,7 +9,7 @@ Installation
 
 .. code-block:: shell
 
-   pip3 install sitesee-seddy
+   pip3 install seddy
 
 
 Documentation

@@ -7,7 +7,7 @@ import logging as lg
 import pkg_resources
 
 try:
-    version = pkg_resources.get_distribution("sitesee-seddy").version
+    version = pkg_resources.get_distribution("seddy").version
 except pkg_resources.DistributionNotFound:  # pragma: no cover
     version = None
 

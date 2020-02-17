@@ -1,4 +1,4 @@
-"""Install script for ``sitesee-seddy``."""
+"""Install script for ``seddy``."""
 
 import setuptools
 

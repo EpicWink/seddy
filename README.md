@@ -8,7 +8,7 @@ Multi-workflow SWF decider service.
 
 ### Installation
 ```bash
-pip3 install sitesee-seddy
+pip3 install seddy
 ```
 
 For coloured logging
