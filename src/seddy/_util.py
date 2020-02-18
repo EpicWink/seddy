@@ -32,9 +32,7 @@ def list_paginated(
     if resp.get(next_key):
         kwargs = kwargs.copy()
         kwargs[next_arg] = resp.pop(next_key)
-        new_resp = list_paginated(
-            fn, list_key, kwargs, next_key, next_arg,
-        )
+        new_resp = list_paginated(fn, list_key, kwargs, next_key, next_arg)
         resp[list_key].extend(new_resp[list_key])
     return resp
 
