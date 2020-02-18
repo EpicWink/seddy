@@ -23,7 +23,8 @@ def setup_workflows(
     assert (1,) < tuple(map(int, decider_spec["version"].split("."))) < (2,)
     workflows = []
     for workflow_spec in decider_spec["workflows"]:
-        workflow = seddy_decisions.WORKFLOW[workflow_spec["spec_type"]](workflow_spec)
+        workflow_cls = seddy_decisions.WORKFLOW[workflow_spec["spec_type"]]
+        workflow = workflow_cls.from_spec(workflow_spec)
         workflow.setup()
         workflows.append(workflow)
     return workflows

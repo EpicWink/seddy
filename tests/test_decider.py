@@ -23,9 +23,12 @@ class TestDecider:
             mock.Mock(spec=seddy_decisions.Workflow),
             mock.Mock(spec=seddy_decisions.Workflow),
         ]
-        workflows[0].spec = {"name": "spam", "version": "1.0"}
-        workflows[1].spec = {"name": "bar", "version": "0.42"}
-        workflows[2].spec = {"name": "spam", "version": "1.1"}
+        workflows[0].name = "spam"
+        workflows[0].version = "1.0"
+        workflows[1].name = "bar"
+        workflows[1].version = "0.42"
+        workflows[2].name = "spam"
+        workflows[2].version = "1.1"
         return workflows
 
     @pytest.fixture

@@ -71,7 +71,7 @@ class Decider:
             workflow decisions
         """
 
-        workflow_ids = [(w.spec["name"], w.spec["version"]) for w in self.workflows]
+        workflow_ids = [(w.name, w.version) for w in self.workflows]
         task_id = (task["workflowType"]["name"], task["workflowType"]["version"])
         idx = workflow_ids.index(task_id)
         workflow = self.workflows[idx]

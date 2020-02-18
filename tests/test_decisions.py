@@ -57,15 +57,23 @@ class TestWorkflow:
         return {"name": "foo", "version": "0.42", "tasks": [], "type": "eggs"}
 
     @pytest.fixture
-    def instance(self, spec):
+    def instance(self):
         """Workflow specification instance."""
-        return self.Workflow(spec)
+        return self.Workflow("foo", "0.42")
 
     def test_init(self, instance, spec):
         """Test workflow specification initialisation."""
-        assert instance.spec is spec
+        assert instance.name == "foo"
+        assert instance.version == "0.42"
         assert instance.spec_type == "eggs"
         assert instance.decisions_builder is self.Workflow.DecisionsBuilder
+
+    def test_from_spec(self, spec):
+        """Test workflow specification construction from specification."""
+        res = self.Workflow.from_spec(spec)
+        assert isinstance(res, self.Workflow)
+        assert res.name == "foo"
+        assert res.version == "0.42"
 
     def test_setup(self, instance):
         """Test workflow specification pre-computation."""

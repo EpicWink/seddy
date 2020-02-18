@@ -22,10 +22,10 @@ def _get(item_id, items, id_key):
 class DAGBuilder(_base.DecisionsBuilder):
     """SWF decision builder from DAG-type workflow specification."""
 
-    def __init__(self, workflow, task):
+    def __init__(self, workflow: "DAGWorkflow", task):
         super().__init__(workflow, task)
         self._scheduled = {}
-        self._activity_task_events = {at["id"]: [] for at in workflow.spec["tasks"]}
+        self._activity_task_events = {at["id"]: [] for at in workflow.task_specs}
 
     def _schedule_task(
         self,
@@ -82,7 +82,7 @@ class DAGBuilder(_base.DecisionsBuilder):
         dependants_task = self.workflow.dependants[attrs["activityId"]]
         for activity_task_id in dependants_task:
             assert not self._activity_task_events[activity_task_id]
-            activity_task = _get(activity_task_id, self.workflow.spec["tasks"], "id")
+            activity_task = _get(activity_task_id, self.workflow.task_specs, "id")
             dependencies_satisfied = True
             for dependency_activity_task_id in activity_task["dependencies"]:
                 events = self._activity_task_events[dependency_activity_task_id]
@@ -139,7 +139,7 @@ class DAGBuilder(_base.DecisionsBuilder):
 
     def _process_cancel_requested_event(self):
         decisions = []
-        for activity_task in self.workflow.spec["tasks"]:
+        for activity_task in self.workflow.task_specs:
             events = self._activity_task_events[activity_task["id"]]
             if events and events[-1]["eventType"] in (
                 "ActivityTaskScheduled",
@@ -158,7 +158,7 @@ class DAGBuilder(_base.DecisionsBuilder):
 
     def _process_workflow_execution_started_event(self, event: t.Dict[str, t.Any]):
         assert event is self.task["events"][0]
-        for activity_task in self.workflow.spec["tasks"]:
+        for activity_task in self.workflow.task_specs:
             assert not self._activity_task_events[activity_task["id"]]
             if not activity_task.get("dependencies"):
                 self._schedule_task(activity_task, event)
@@ -195,19 +195,30 @@ class DAGBuilder(_base.DecisionsBuilder):
 
 
 class DAGWorkflow(_base.Workflow):
-    """Dag-type SWF workflow specification."""
+    """Dag-type SWF workflow specification.
+
+    Args:
+        name: workflow name
+        version: workflow version
+        task_specs: DAG task specifications
+    """
 
     spec_type = "dag"
     decisions_builder = DAGBuilder
 
-    def __init__(self, spec):
-        super().__init__(spec)
+    def __init__(self, name, version, task_specs: t.List[t.Dict[str, t.Any]]):
+        super().__init__(name, version)
+        self.task_specs = task_specs
         self.dependants = {}
 
+    @classmethod
+    def from_spec(cls, spec):
+        return cls(spec["name"], spec["version"], spec["tasks"])
+
     def _build_dependants(self):
-        for activity_task in self.spec["tasks"]:
+        for activity_task in self.task_specs:
             dependants_task = []
-            for other_activity_task in self.spec["tasks"]:
+            for other_activity_task in self.task_specs:
                 if activity_task["id"] in other_activity_task.get("dependencies", []):
                     dependants_task.append(other_activity_task["id"])
             self.dependants[activity_task["id"]] = dependants_task

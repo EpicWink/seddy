@@ -3,6 +3,8 @@
 import abc
 import typing as t
 
+T = t.TypeVar("T")
+
 
 class DecisionsBuilder(metaclass=abc.ABCMeta):
     """SWF decision builder.
@@ -27,11 +29,23 @@ class Workflow(metaclass=abc.ABCMeta):
     """SWF workflow specification.
 
     Args:
-        spec: workflow specification
+        name: workflow name
+        version: workflow version
     """
 
-    def __init__(self, spec: t.Dict[str, t.Any]):
-        self.spec = spec
+    def __init__(self, name: str, version: str):
+        self.name = name
+        self.version = version
+
+    @classmethod
+    def from_spec(cls: T, spec: t.Dict[str, t.Any]) -> T:
+        """Construct workflow type from specification.
+
+        Args:
+            spec: workflow specification
+        """
+
+        return cls(spec["name"], spec["version"])
 
     @property
     @abc.abstractmethod

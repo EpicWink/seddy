@@ -10,7 +10,7 @@ class TestDAGBuilder:
     @pytest.fixture
     def workflow(self):
         """Example DAG workflow specification."""
-        workflow = seddy_decisions.DAGWorkflow(
+        workflow = seddy_decisions.DAGWorkflow.from_spec(
             {
                 "name": "foo",
                 "version": "0.42",
@@ -398,8 +398,8 @@ class TestDAGBuilder:
             ]
         elif request.param == "foo-complete-yay-unsatisfied":
             workflow.dependants["bar"] = ["yay"]
-            assert workflow.spec["tasks"][2]["id"] == "yay"
-            workflow.spec["tasks"][2]["dependencies"] = ["foo", "bar"]
+            assert workflow.task_specs[2]["id"] == "yay"
+            workflow.task_specs[2]["dependencies"] = ["foo", "bar"]
 
             task = {
                 "taskToken": "spam",
@@ -569,49 +569,59 @@ class TestWorkflow:
     """Test ``seddy.decisions.DAGWorkflow``."""
 
     @pytest.fixture
-    def spec(self):
-        """Example DAG-type workflow specification."""
-        return {
-            "name": "foo",
-            "version": "0.42",
-            "tasks": [
-                {
-                    "id": "foo",
-                    "type": {"name": "spam-foo", "version": "0.3"},
-                    "heartbeat": "60",
-                    "timeout": "86400",
-                    "task_list": "eggs",
-                    "priority": "1",
-                },
-                {
-                    "id": "bar",
-                    "type": {"name": "spam-bar", "version": "0.1"},
-                    "heartbeat": "60",
-                    "timeout": "86400",
-                    "dependencies": "foo",
-                },
-                {
-                    "id": "yay",
-                    "type": {"name": "spam-foo", "version": "0.3"},
-                    "heartbeat": "60",
-                    "timeout": "86400",
-                    "dependencies": "foo",
-                },
-            ],
-            "type": "dag",
-        }
+    def task_specs(self):
+        """Example DAG-type workflow tasks specifications."""
+        return [
+            {
+                "id": "foo",
+                "type": {"name": "spam-foo", "version": "0.3"},
+                "heartbeat": "60",
+                "timeout": "86400",
+                "task_list": "eggs",
+                "priority": "1",
+            },
+            {
+                "id": "bar",
+                "type": {"name": "spam-bar", "version": "0.1"},
+                "heartbeat": "60",
+                "timeout": "86400",
+                "dependencies": "foo",
+            },
+            {
+                "id": "yay",
+                "type": {"name": "spam-foo", "version": "0.3"},
+                "heartbeat": "60",
+                "timeout": "86400",
+                "dependencies": "foo",
+            },
+        ]
 
     @pytest.fixture
-    def instance(self, spec):
-        """DAG-type workflow specification instance."""
-        return seddy_decisions.DAGWorkflow(spec)
+    def spec(self, task_specs):
+        """Example DAG-type workflow specification."""
+        return {"name": "foo", "version": "0.42", "tasks": task_specs, "type": "dag"}
 
-    def test_init(self, instance, spec):
+    @pytest.fixture
+    def instance(self, task_specs):
+        """DAG-type workflow specification instance."""
+        return seddy_decisions.DAGWorkflow("foo", "0.42", task_specs)
+
+    def test_init(self, instance, task_specs):
         """Test DAG-type workflow specification initialisation."""
-        assert instance.spec is spec
+        assert instance.name == "foo"
+        assert instance.version == "0.42"
+        assert instance.task_specs is task_specs
         assert instance.spec_type == "dag"
         assert instance.decisions_builder is seddy_decisions.DAGBuilder
         assert not instance.dependants
+
+    def test_from_spec(self, spec, task_specs):
+        """Test construction from specification."""
+        res = seddy_decisions.DAGWorkflow.from_spec(spec)
+        assert isinstance(res, seddy_decisions.DAGWorkflow)
+        assert res.name == "foo"
+        assert res.version == "0.42"
+        assert res.task_specs is task_specs
 
     def test_setup(self, instance):
         """Test DAG-type workflow specification pre-computation."""
