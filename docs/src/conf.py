@@ -1,13 +1,12 @@
 """Configuration file for the Sphinx documentation builder."""
 
-import pathlib
+import pkg_resources
 
 project = "seddy"
 copyright = "2020, SiteSee"
 author = "Laurie O"
 
-_version_path = pathlib.Path(__file__).parent.parent.parent / "VERSION"
-release = _version_path.read_text().strip()  # full version
+release = pkg_resources.get_distribution("seddy").version  # full version
 version = ".".join(release.split(".")[:2])  # short version
 
 extensions = [
