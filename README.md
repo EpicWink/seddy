@@ -4,6 +4,8 @@ https://github.com/EpicWink/seddy/workflows/test/badge.svg?branch=master)](
 https://github.com/EpicWink/seddy/actions?query=branch%3Amaster+workflow%3Atest)
 [![codecov](https://codecov.io/gh/EpicWink/seddy/branch/master/graph/badge.svg)](
 https://codecov.io/gh/EpicWink/seddy)
+[![Documentation Status](https://readthedocs.org/projects/seddy/badge/?version=latest)](
+https://seddy.readthedocs.io/en/latest/?badge=latest)
 
 Multi-workflow SWF decider and workflow management service.
 
