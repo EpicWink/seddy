@@ -7,6 +7,7 @@ import logging as lg
 
 import boto3
 
+from . import _util
 from . import decisions as seddy_decisions
 
 logger = lg.getLogger(__name__)
@@ -35,31 +36,24 @@ class Decider:
         self.client = boto3.client("swf")
         self.identity = socket.getfqdn() + "-" + str(uuid.uuid4())[:8]
 
-    def _poll_for_decision_task(
-        self, _next_page_token: str = None
-    ) -> t.Dict[str, t.Any]:
+    def _poll_for_decision_task(self) -> t.Dict[str, t.Any]:
         """Poll for a decision task from SWF.
 
         See https://docs.aws.amazon.com/amazonswf/latest/apireference/API_PollForDecisionTask.html
-
-        Args:
-            _next_page_token: events pagination token
 
         Returns:
             decision task
         """
 
-        kwargs = {"nextPageToken": _next_page_token} if _next_page_token else {}
-        resp = self.client.poll_for_decision_task(
-            domain=self.domain,
-            identity=self.identity,
-            taskList={"name": self.task_list},
-            **kwargs,
+        return _util.list_paginated(
+            self.client.poll_for_decision_task,
+            "events",
+            {
+                "domain": self.domain,
+                "identity": self.identity,
+                "taskList": {"name": self.task_list},
+            },
         )
-        if resp.get("nextPageToken"):  # pragma: no cover
-            new_resp = self._poll_for_decision_task(resp.pop("nextPageToken"))
-            resp["events"].extend(new_resp["events"])
-        return resp
 
     def _make_decisions(self, task: t.Dict[str, t.Any]) -> t.List[t.Dict[str, t.Any]]:
         """Build decisions from workflow history.
