@@ -15,3 +15,4 @@ extensions = [
     "sphinx.ext.napoleon",
 ]
 html_theme = "sphinx_rtd_theme"
+master_doc = "index"  # support read-the-docs
