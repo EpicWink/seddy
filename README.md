@@ -5,7 +5,7 @@ https://github.com/EpicWink/seddy/actions?query=branch%3Amaster+workflow%3Atest)
 [![codecov](https://codecov.io/gh/EpicWink/seddy/branch/master/graph/badge.svg)](
 https://codecov.io/gh/EpicWink/seddy)
 
-Multi-workflow SWF decider service.
+Multi-workflow SWF decider and workflow management service.
 
 Features:
 * Start a decider on many workflows
