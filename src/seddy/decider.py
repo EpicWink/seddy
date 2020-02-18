@@ -129,16 +129,16 @@ class Decider:
             logger.info("Quitting due to keyboard-interrupt")
 
 
-def run_app(decider_spec_json: pathlib.Path, domain: str, task_list: str):
+def run_app(workflows_spec_json: pathlib.Path, domain: str, task_list: str):
     """Run decider application.
 
     Arguments:
-        decider_spec_json: decider specification JSON
+        workflows_spec_json: workflows specifications JSON
         domain: SWF domain
         task_list: SWF decider task-list
     """
 
-    decider_spec = json.loads(decider_spec_json.read_text())
+    decider_spec = json.loads(workflows_spec_json.read_text())
     workflows = _util.setup_workflows(decider_spec)
     decider = Decider(workflows, domain, task_list)
     decider.run()

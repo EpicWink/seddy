@@ -17,7 +17,7 @@ def test_run_app(tmp_path):
     )
 
     # Build input
-    decider_spec = {
+    workflows_spec = {
         "version": "1.0",
         "workflows": [
             {
@@ -51,12 +51,12 @@ def test_run_app(tmp_path):
             }
         ],
     }
-    decider_spec_json = tmp_path / "workflows.json"
-    decider_spec_json.write_text(json.dumps(decider_spec, indent=4))
+    workflows_spec_json = tmp_path / "workflows.json"
+    workflows_spec_json.write_text(json.dumps(workflows_spec, indent=4))
 
     # Run function
     with decider_class_patch:
-        seddy_decider.run_app(decider_spec_json, "spam", "eggs")
+        seddy_decider.run_app(workflows_spec_json, "spam", "eggs")
 
     # Check decider configuration
     decider_class_mock.assert_called_once_with(mock.ANY, "spam", "eggs")
@@ -65,6 +65,6 @@ def test_run_app(tmp_path):
     workflows = decider_class_mock.call_args_list[0][0][0]
     assert len(workflows) == 1
     assert isinstance(workflows[0], seddy_decisions.DAGWorkflow)
-    assert workflows[0].name == decider_spec["workflows"][0]["name"]
-    assert workflows[0].version == decider_spec["workflows"][0]["version"]
+    assert workflows[0].name == workflows_spec["workflows"][0]["name"]
+    assert workflows[0].version == workflows_spec["workflows"][0]["version"]
     assert workflows[0].dependants == {"foo": ["bar", "yay"], "bar": [], "yay": []}

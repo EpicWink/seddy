@@ -82,20 +82,20 @@ def list_paginated(
 
 
 def setup_workflows(
-    decider_spec: t.Dict[str, t.Any]
+    workflows_spec: t.Dict[str, t.Any]
 ) -> t.List[seddy_decisions.Workflow]:
     """Set-up decider workflows.
 
     Args:
-        decider_spec: decider specification
+        workflows_spec: decider specification
 
     Returns:
         decider initialised workflows
     """
 
-    assert (1,) < tuple(map(int, decider_spec["version"].split("."))) < (2,)
+    assert (1,) < tuple(map(int, workflows_spec["version"].split("."))) < (2,)
     workflows = []
-    for workflow_spec in decider_spec["workflows"]:
+    for workflow_spec in workflows_spec["workflows"]:
         workflow_cls = seddy_decisions.WORKFLOW[workflow_spec["spec_type"]]
         workflow = workflow_cls.from_spec(workflow_spec)
         workflow.setup()

@@ -19,7 +19,7 @@ def run_app(args: argparse.Namespace):
     if args.command == "decider":
         from . import decider
 
-        decider.run_app(args.decider_json, args.domain, args.task_list)
+        decider.run_app(args.workflows_json, args.domain, args.task_list)
     else:
         raise ValueError(args.command)
 
@@ -41,7 +41,7 @@ def build_parser():
         "decider", help="run SWF decider", description="Run SWF decider."
     )
     decider_parser.add_argument(
-        "decider_json", type=pathlib.Path, help="decider specification JSON"
+        "workflows_json", type=pathlib.Path, help="workflows specifications JSON"
     )
     decider_parser.add_argument("domain", help="SWF domain")
     decider_parser.add_argument("task_list", help="SWF decider task-list")
