@@ -8,7 +8,7 @@ import pytest
 
 def test_workflow_map():
     """Test workflow class map."""
-    assert seddy_decisions.WORKFLOW["dag"] == seddy_decisions.DAG
+    assert seddy_decisions.WORKFLOW["dag"] == seddy_decisions.DAGWorkflow
 
 
 class TestDecisionsBuilder:

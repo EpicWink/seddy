@@ -194,7 +194,7 @@ class DAGBuilder(_base.DecisionsBuilder):
         self._process_new_events()
 
 
-class DAG(_base.Workflow):
+class DAGWorkflow(_base.Workflow):
     """Dag-type SWF workflow specification."""
 
     spec_type = "dag"

@@ -1,12 +1,12 @@
 """SWF decisions building."""
 
-__all__ = ["DecisionsBuilder", "Workflow", "DAGBuilder", "DAG"]
+__all__ = ["DecisionsBuilder", "Workflow", "DAGBuilder", "DAGWorkflow"]
 
 from ._base import DecisionsBuilder
 from ._base import Workflow
 from ._dag import DAGBuilder
-from ._dag import DAG
+from ._dag import DAGWorkflow
 
 WORKFLOW = {
-    DAG.spec_type: DAG,
+    DAGWorkflow.spec_type: DAGWorkflow,
 }

@@ -65,6 +65,6 @@ def test_run_app(tmp_path):
 
     workflows = decider_class_mock.call_args_list[0][0][0]
     assert len(workflows) == 1
-    assert isinstance(workflows[0], seddy_decisions.DAG)
+    assert isinstance(workflows[0], seddy_decisions.DAGWorkflow)
     assert workflows[0].spec == decider_spec["workflows"][0]
     assert workflows[0].dependants == {"foo": ["bar", "yay"], "bar": [], "yay": []}

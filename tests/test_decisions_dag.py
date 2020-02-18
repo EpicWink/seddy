@@ -10,7 +10,7 @@ class TestDAGBuilder:
     @pytest.fixture
     def workflow(self):
         """Example DAG workflow specification."""
-        workflow = seddy_decisions.DAG(
+        workflow = seddy_decisions.DAGWorkflow(
             {
                 "name": "foo",
                 "version": "0.42",
@@ -566,7 +566,7 @@ class TestDAGBuilder:
 
 
 class TestWorkflow:
-    """Test ``seddy.decisions.DAG``."""
+    """Test ``seddy.decisions.DAGWorkflow``."""
 
     @pytest.fixture
     def spec(self):
@@ -604,7 +604,7 @@ class TestWorkflow:
     @pytest.fixture
     def instance(self, spec):
         """DAG-type workflow specification instance."""
-        return seddy_decisions.DAG(spec)
+        return seddy_decisions.DAGWorkflow(spec)
 
     def test_init(self, instance, spec):
         """Test DAG-type workflow specification initialisation."""
