@@ -12,6 +12,7 @@ except pkg_resources.DistributionNotFound:  # pragma: no cover
 
 
 def run_app(args: argparse.Namespace):
+    """Run application from parsed command-line arguments."""
     from . import _util
 
     _util.setup_logging(args.verbose - args.quiet)
@@ -20,11 +21,12 @@ def run_app(args: argparse.Namespace):
         from . import decider
 
         decider.run_app(args.workflows_json, args.domain, args.task_list)
-    else:
+    else:  # pragma: no cover
         raise ValueError(args.command)
 
 
-def build_parser():
+def build_parser() -> argparse.ArgumentParser:
+    """Build command-line argument parser."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "-v", "--verbose", action="count", default=0, help="increase logging verbosity"
