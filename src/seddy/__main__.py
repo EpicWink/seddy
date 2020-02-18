@@ -21,6 +21,10 @@ def run_app(args: argparse.Namespace):
         from . import decider
 
         decider.run_app(args.workflows_json, args.domain, args.task_list)
+    elif args.command == "register":
+        from . import registration
+
+        registration.run_app(args.workflows_json, args.domain, args.skip_existing)
     else:  # pragma: no cover
         raise ValueError(args.command)
 
@@ -47,6 +51,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     decider_parser.add_argument("domain", help="SWF domain")
     decider_parser.add_argument("task_list", help="SWF decider task-list")
+
+    # Workflows registration
+    register_parser = subparsers.add_parser(
+        "register",
+        help="register workflows with SWF",
+        description="Register workflows with SWF.",
+    )
+    register_parser.add_argument(
+        "workflows_json", type=pathlib.Path, help="workflows specifications JSON"
+    )
+    register_parser.add_argument("domain", help="SWF domain")
+    register_parser.add_argument(
+        "-s",
+        "--skip-existing",
+        action="store_true",
+        help="check for and skip existing workflows with the same name and version",
+    )
 
     return parser
 

@@ -6,6 +6,7 @@ from unittest import mock
 
 from seddy import __main__ as seddy_main
 from seddy import decider as seddy_decider
+from seddy import registration as seddy_registration
 import pytest
 import coloredlogs
 import pkg_resources
@@ -87,6 +88,9 @@ def test_logging(
             "Run SWF decider.",
             id='"decider a.json spam eggs -h"',
         ),
+        pytest.param(
+            ["register", "-h"], "Register workflows with SWF.", id='"decider -h"'
+        ),
     ],
 )
 def test_usage(decider_mock, command_line_args, capsys, description):
@@ -138,3 +142,21 @@ def test_decider(decider_mock, tmp_path):
 
     # Check application input
     decider_mock.assert_called_once_with(tmp_path / "workflows.json", "spam", "eggs")
+
+
+def test_register(tmp_path):
+    """Ensure workflow registration application is run correctly."""
+    # Setup environment
+    run_app_mock = mock.Mock()
+    run_app_patch = mock.patch.object(seddy_registration, "run_app", run_app_mock)
+
+    # Run function
+    parser = seddy_main.build_parser()
+    args = parser.parse_args(
+        ["register", str(tmp_path / "workflows.json"), "spam", "-s"]
+    )
+    with run_app_patch:
+        seddy_main.run_app(args)
+
+    # Check application input
+    run_app_mock.assert_called_once_with(tmp_path / "workflows.json", "spam", True)

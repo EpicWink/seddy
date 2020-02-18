@@ -13,6 +13,7 @@ Features:
   workflow
 * Supports coloured logging
 * Extensible decision-building: just subclass `seddy.decisions.DecisionsBuilder`
+* Register workflows
 
 ## Installation
 ```bash

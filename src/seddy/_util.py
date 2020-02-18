@@ -98,6 +98,8 @@ def construct_workflows(
     for workflow_spec in workflows_spec["workflows"]:
         workflow_cls = seddy_decisions.WORKFLOW[workflow_spec["spec_type"]]
         workflow = workflow_cls.from_spec(workflow_spec)
+        if "registration_defaults" in workflow_spec:
+            workflow.registration_defaults = workflow_spec["registration_defaults"]
         workflows.append(workflow)
     return workflows
 
