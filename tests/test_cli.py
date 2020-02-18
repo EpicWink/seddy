@@ -64,7 +64,7 @@ def test_logging(
     # Run function
     parser = seddy_main.build_parser()
     args = parser.parse_args(
-        [str(tmp_path / "workflows.json"), "spam", "eggs"] + verbosity_flags
+        verbosity_flags + ["decider", str(tmp_path / "workflows.json"), "spam", "eggs"]
     )
     with root_logger_patch, coloredlogs_patch:
         seddy_main.run_app(args)
@@ -77,14 +77,19 @@ def test_logging(
 
 
 @pytest.mark.parametrize(
-    "command_line_args",
+    ("command_line_args", "description"),
     [
-        pytest.param(["-h"], id='"-h"'),
-        pytest.param(["--help"], id='"--help"'),
-        pytest.param(["a.json", "spam", "eggs", "-h"], id='"a.json spam eggs -h"'),
+        pytest.param(["-h"], "SWF workflow management service.", id='"-h"'),
+        pytest.param(["--help"], "SWF workflow management service.", id='"--help"'),
+        pytest.param(["decider", "-h"], "Run SWF decider.", id='"decider -h"'),
+        pytest.param(
+            ["decider", "a.json", "spam", "eggs", "-h"],
+            "Run SWF decider.",
+            id='"decider a.json spam eggs -h"',
+        ),
     ],
 )
-def test_usage(decider_mock, command_line_args, capsys):
+def test_usage(decider_mock, command_line_args, capsys, description):
     """Ensure usage is displayed."""
     # Run function
     parser = seddy_main.build_parser()
@@ -95,7 +100,7 @@ def test_usage(decider_mock, command_line_args, capsys):
     # Check output
     res_out = capsys.readouterr().out
     assert res_out[:6] == "usage:"
-    assert res_out.splitlines()[2] == "SWF decider application."
+    assert res_out.splitlines()[2] == description
 
 
 @pytest.mark.parametrize(
@@ -103,7 +108,10 @@ def test_usage(decider_mock, command_line_args, capsys):
     [
         pytest.param(["-V"], id='"-V"'),
         pytest.param(["--version"], id='"--version"'),
-        pytest.param(["a.json", "spam", "eggs", "-V"], id='"a.json spam eggs -V"'),
+        pytest.param(
+            ["-V", "decider", "a.json", "spam", "eggs"],
+            id='"-V decider a.json spam eggs"',
+        ),
     ],
 )
 def test_version(decider_mock, command_line_args, capsys):
@@ -123,7 +131,9 @@ def test_decider(decider_mock, tmp_path):
     """Ensure decider application is run with the correct input."""
     # Run function
     parser = seddy_main.build_parser()
-    args = parser.parse_args([str(tmp_path / "workflows.json"), "spam", "eggs"])
+    args = parser.parse_args(
+        ["decider", str(tmp_path / "workflows.json"), "spam", "eggs"]
+    )
     seddy_main.run_app(args)
 
     # Check application input
