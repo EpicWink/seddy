@@ -139,6 +139,7 @@ def run_app(workflows_spec_json: pathlib.Path, domain: str, task_list: str):
     """
 
     decider_spec = json.loads(workflows_spec_json.read_text())
-    workflows = _util.setup_workflows(decider_spec)
+    workflows = _util.construct_workflows(decider_spec)
+    _util.setup_workflows(workflows)
     decider = Decider(workflows, domain, task_list)
     decider.run()
