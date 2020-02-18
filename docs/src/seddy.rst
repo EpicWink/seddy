@@ -4,8 +4,8 @@ API reference
 .. toctree::
 
    seddy.decisions
-   seddy.app
    seddy.decider
+   seddy.registration
 
 .. automodule:: seddy
    :members:
