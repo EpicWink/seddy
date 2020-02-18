@@ -33,9 +33,10 @@ class Workflow(metaclass=abc.ABCMeta):
         version: workflow version
     """
 
-    def __init__(self, name: str, version: str):
+    def __init__(self, name: str, version: str, description: str = None):
         self.name = name
         self.version = version
+        self.description = description
 
     @classmethod
     def from_spec(cls: T, spec: t.Dict[str, t.Any]) -> T:
@@ -45,7 +46,7 @@ class Workflow(metaclass=abc.ABCMeta):
             spec: workflow specification
         """
 
-        return cls(spec["name"], spec["version"])
+        return cls(spec["name"], spec["version"], spec.get("description"))
 
     @property
     @abc.abstractmethod

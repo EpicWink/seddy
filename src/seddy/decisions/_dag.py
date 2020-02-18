@@ -206,14 +206,18 @@ class DAGWorkflow(_base.Workflow):
     spec_type = "dag"
     decisions_builder = DAGBuilder
 
-    def __init__(self, name, version, task_specs: t.List[t.Dict[str, t.Any]]):
-        super().__init__(name, version)
+    def __init__(
+        self, name, version, task_specs: t.List[t.Dict[str, t.Any]], description=None
+    ):
+        super().__init__(name, version, description)
         self.task_specs = task_specs
         self.dependants = {}
 
     @classmethod
     def from_spec(cls, spec):
-        return cls(spec["name"], spec["version"], spec["tasks"])
+        return cls(
+            spec["name"], spec["version"], spec["tasks"], spec.get("description")
+        )
 
     def _build_dependants(self):
         for activity_task in self.task_specs:

@@ -599,17 +599,24 @@ class TestWorkflow:
     @pytest.fixture
     def spec(self, task_specs):
         """Example DAG-type workflow specification."""
-        return {"name": "foo", "version": "0.42", "tasks": task_specs, "type": "dag"}
+        return {
+            "name": "foo",
+            "version": "0.42",
+            "description": "A DAGflow",
+            "tasks": task_specs,
+            "type": "dag",
+        }
 
     @pytest.fixture
     def instance(self, task_specs):
         """DAG-type workflow specification instance."""
-        return seddy_decisions.DAGWorkflow("foo", "0.42", task_specs)
+        return seddy_decisions.DAGWorkflow("foo", "0.42", task_specs, "A DAGflow")
 
     def test_init(self, instance, task_specs):
         """Test DAG-type workflow specification initialisation."""
         assert instance.name == "foo"
         assert instance.version == "0.42"
+        assert instance.description == "A DAGflow"
         assert instance.task_specs is task_specs
         assert instance.spec_type == "dag"
         assert instance.decisions_builder is seddy_decisions.DAGBuilder
@@ -621,6 +628,7 @@ class TestWorkflow:
         assert isinstance(res, seddy_decisions.DAGWorkflow)
         assert res.name == "foo"
         assert res.version == "0.42"
+        assert res.description == "A DAGflow"
         assert res.task_specs is task_specs
 
     def test_setup(self, instance):

@@ -5,6 +5,7 @@
             "spec_type": "dag",
             "name": "spam",
             "version": "1.0",
+            "description": "A workflow with spam, spam, eggs and spam.",
             "tasks": [
                 {
                     "id": "foo",
