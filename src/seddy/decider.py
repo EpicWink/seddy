@@ -1,7 +1,9 @@
 """SWF decider."""
 
+import json
 import uuid
 import socket
+import pathlib
 import typing as t
 import logging as lg
 
@@ -125,3 +127,18 @@ class Decider:
             self._run_uncaught()
         except KeyboardInterrupt:
             logger.info("Quitting due to keyboard-interrupt")
+
+
+def run_app(decider_spec_json: pathlib.Path, domain: str, task_list: str):
+    """Run decider application.
+
+    Arguments:
+        decider_spec_json: decider specification JSON
+        domain: SWF domain
+        task_list: SWF decider task-list
+    """
+
+    decider_spec = json.loads(decider_spec_json.read_text())
+    workflows = _util.setup_workflows(decider_spec)
+    decider = Decider(workflows, domain, task_list)
+    decider.run()

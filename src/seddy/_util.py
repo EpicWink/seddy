@@ -2,6 +2,8 @@
 
 import typing as t
 
+from . import decisions as seddy_decisions
+
 
 def list_paginated(
     fn: t.Callable[..., t.Dict[str, t.Any]],
@@ -35,3 +37,25 @@ def list_paginated(
         )
         resp[list_key].extend(new_resp[list_key])
     return resp
+
+
+def setup_workflows(
+    decider_spec: t.Dict[str, t.Any]
+) -> t.List[seddy_decisions.Workflow]:
+    """Set-up decider workflows.
+
+    Args:
+        decider_spec: decider specification
+
+    Returns:
+        decider initialised workflows
+    """
+
+    assert (1,) < tuple(map(int, decider_spec["version"].split("."))) < (2,)
+    workflows = []
+    for workflow_spec in decider_spec["workflows"]:
+        workflow_cls = seddy_decisions.WORKFLOW[workflow_spec["spec_type"]]
+        workflow = workflow_cls.from_spec(workflow_spec)
+        workflow.setup()
+        workflows.append(workflow)
+    return workflows

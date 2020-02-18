@@ -5,7 +5,7 @@ import logging as lg
 from unittest import mock
 
 from seddy import __main__ as seddy_main
-from seddy import app as seddy_app
+from seddy import decider as seddy_decider
 import pytest
 import coloredlogs
 import pkg_resources
@@ -15,7 +15,7 @@ import pkg_resources
 def decider_mock():
     """Decider application mock."""
     run_app_mock = mock.Mock()
-    with mock.patch.object(seddy_app, "run_app", run_app_mock):
+    with mock.patch.object(seddy_decider, "run_app", run_app_mock):
         yield run_app_mock
 
 

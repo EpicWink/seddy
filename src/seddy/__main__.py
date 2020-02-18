@@ -47,10 +47,10 @@ def setup_logging(verbose: int):
 
 
 def run_app(args: argparse.Namespace):
-    from . import app
+    from . import decider
 
     setup_logging(args.verbose - args.quiet)
-    app.run_app(args.decider_json, args.domain, args.task_list)
+    decider.run_app(args.decider_json, args.domain, args.task_list)
 
 
 def build_parser():

@@ -3,7 +3,6 @@
 import json
 from unittest import mock
 
-from seddy import app as seddy_app
 from seddy import decider as seddy_decider
 from seddy import decisions as seddy_decisions
 
@@ -57,7 +56,7 @@ def test_run_app(tmp_path):
 
     # Run function
     with decider_class_patch:
-        seddy_app.run_app(decider_spec_json, "spam", "eggs")
+        seddy_decider.run_app(decider_spec_json, "spam", "eggs")
 
     # Check decider configuration
     decider_class_mock.assert_called_once_with(mock.ANY, "spam", "eggs")
