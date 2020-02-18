@@ -5,39 +5,48 @@ import logging as lg
 
 from . import decisions as seddy_decisions
 
+LOGGING_LEVELS = {
+    -2: lg.ERROR,
+    -1: lg.WARNING,
+    0: 25,
+    1: lg.INFO,
+    2: lg.DEBUG,
+}
+
 
 def setup_logging(verbose: int):
+    """Setup logging.
+
+    Args:
+        verbose: logging verbosity
+    """
+
     lg.addLevelName(25, "NOTICE")
-    levels = {
-        -2: lg.ERROR,
-        -1: lg.WARNING,
-        0: 25,
-        1: lg.INFO,
-        2: lg.DEBUG,
-    }
-    level = levels.get(verbose, lg.CRITICAL if verbose < 0 else lg.NOTSET)
+    level = LOGGING_LEVELS.get(verbose, lg.CRITICAL if verbose < 0 else lg.NOTSET)
     fmt = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
+
     try:
         import coloredlogs
     except ImportError:
         lg.basicConfig(level=level, format=fmt)
-    else:
-        coloredlogs.install(
-            level=level,
-            fmt=fmt,
-            field_styles={
-                "asctime": {"faint": True, "color": "white"},
-                "levelname": {"bold": True, "color": "blue"},
-                "name": {"bold": True, "color": "yellow"},
-            },
-            level_styles={
-                **coloredlogs.DEFAULT_LEVEL_STYLES,
-                "notice": {},
-                "info": {"color": "white"},
-            },
-            milliseconds=True,
-        )
-        lg.root.setLevel(level)
+        return
+
+    coloredlogs.install(
+        level=level,
+        fmt=fmt,
+        field_styles={
+            "asctime": {"faint": True, "color": "white"},
+            "levelname": {"bold": True, "color": "blue"},
+            "name": {"bold": True, "color": "yellow"},
+        },
+        level_styles={
+            **coloredlogs.DEFAULT_LEVEL_STYLES,
+            "notice": {},
+            "info": {"color": "white"},
+        },
+        milliseconds=True,
+    )
+    lg.root.setLevel(level)
 
 
 def list_paginated(
