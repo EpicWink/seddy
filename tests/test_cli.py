@@ -89,7 +89,7 @@ def test_logging(
             id='"decider a.json spam eggs -h"',
         ),
         pytest.param(
-            ["register", "-h"], "Register workflows with SWF.", id='"decider -h"'
+            ["register", "-h"], "Register workflows with SWF.", id='"register -h"'
         ),
     ],
 )
