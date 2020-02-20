@@ -38,6 +38,7 @@ class DAGBuilder(_base.DecisionsBuilder):
             "activityId": activity_task["id"],
             "activityType": activity_task["type"],
         }
+
         input_ = json.loads(attrs.get("input", "null"))
         if input_:
             decision_attributes["input"] = json.dumps(input_[activity_task["id"]])
@@ -49,12 +50,12 @@ class DAGBuilder(_base.DecisionsBuilder):
             decision_attributes["taskList"] = activity_task["task_list"]
         if "priority" in activity_task:
             decision_attributes["taskPriority"] = str(activity_task["priority"])
-        self.decisions.append(
-            {
-                "decisionType": "ScheduleActivityTask",
-                "scheduleActivityTaskDecisionAttributes": decision_attributes,
-            }
-        )
+
+        decision = {
+            "decisionType": "ScheduleActivityTask",
+            "scheduleActivityTaskDecisionAttributes": decision_attributes,
+        }
+        self.decisions.append(decision)
 
     def _get_scheduled_references(self):
         for event in self.task["events"]:
@@ -62,10 +63,9 @@ class DAGBuilder(_base.DecisionsBuilder):
                 if event["eventType"] == "ActivityTaskScheduled":
                     self._scheduled[event["eventId"]] = event
                 else:
+                    attrs = event[_at_attr_keys[event["eventType"]]]
                     self._scheduled[event["eventId"]] = _get(
-                        event[_at_attr_keys[event["eventType"]]]["scheduledEventId"],
-                        self.task["events"],
-                        "eventId",
+                        attrs["scheduledEventId"], self.task["events"], "eventId"
                     )
 
     def _get_activity_task_events(self):
@@ -80,9 +80,11 @@ class DAGBuilder(_base.DecisionsBuilder):
         scheduled_event = self._scheduled[event["eventId"]]
         attrs = scheduled_event["activityTaskScheduledEventAttributes"]
         dependants_task = self.workflow.dependants[attrs["activityId"]]
+
         for activity_task_id in dependants_task:
             assert not self._activity_task_events[activity_task_id]
             activity_task = _get(activity_task_id, self.workflow.task_specs, "id")
+
             dependencies_satisfied = True
             for dependency_activity_task_id in activity_task["dependencies"]:
                 events = self._activity_task_events[dependency_activity_task_id]
@@ -98,6 +100,7 @@ class DAGBuilder(_base.DecisionsBuilder):
             if not events or events[-1]["eventType"] != "ActivityTaskCompleted":
                 tasks_complete = False
                 break
+
         if tasks_complete:
             result = {}
             for activity_id, events in self._activity_task_events.items():
@@ -105,54 +108,53 @@ class DAGBuilder(_base.DecisionsBuilder):
                 attrs = events[-1].get("activityTaskCompletedEventAttributes")
                 if attrs and "result" in attrs:
                     result[activity_id] = json.loads(attrs["result"])
+
             decision = {"decisionType": "CompleteWorkflowExecution"}
             if result:
-                decision["completeWorkflowExecutionDecisionAttributes"] = {
-                    "result": json.dumps(result)
-                }
+                decision_attrs = {"result": json.dumps(result)}
+                decision["completeWorkflowExecutionDecisionAttributes"] = decision_attrs
             self.decisions = [decision]
             return True
 
     def _process_activity_task_failed_event(self, event: t.Dict[str, t.Any]):
         attr = self._scheduled[event["eventId"]]["activityTaskScheduledEventAttributes"]
-        self.decisions = [
-            {
-                "decisionType": "FailWorkflowExecution",
-                "failWorkflowExecutionDecisionAttributes": {
-                    "reason": "activityFailure",
-                    "details": "Activity '%s' failed" % attr["activityId"],
-                },
-            },
-        ]
+        decision_attrs = {
+            "reason": "activityFailure",
+            "details": "Activity '%s' failed" % attr["activityId"],
+        }
+        decision = {
+            "decisionType": "FailWorkflowExecution",
+            "failWorkflowExecutionDecisionAttributes": decision_attrs,
+        }
+        self.decisions = [decision]
 
     def _process_activity_task_timed_out_event(self, event: t.Dict[str, t.Any]):
         attr = self._scheduled[event["eventId"]]["activityTaskScheduledEventAttributes"]
-        self.decisions = [
-            {
-                "decisionType": "FailWorkflowExecution",
-                "failWorkflowExecutionDecisionAttributes": {
-                    "reason": "activityTimeOut",
-                    "details": "Activity '%s' timed-out" % attr["activityId"],
-                },
-            },
-        ]
+        decision_attrs = {
+            "reason": "activityTimeOut",
+            "details": "Activity '%s' timed-out" % attr["activityId"],
+        }
+        decision = {
+            "decisionType": "FailWorkflowExecution",
+            "failWorkflowExecutionDecisionAttributes": decision_attrs,
+        }
+        self.decisions = [decision]
 
     def _process_cancel_requested_event(self):
+        # Cancel running activity tasks
+        running_event_types = ("ActivityTaskScheduled", "ActivityTaskStarted")
         decisions = []
         for activity_task in self.workflow.task_specs:
             events = self._activity_task_events[activity_task["id"]]
-            if events and events[-1]["eventType"] in (
-                "ActivityTaskScheduled",
-                "ActivityTaskStarted",
-            ):
-                decisions.append(
-                    {
-                        "decisionType": "RequestCancelActivityTask",
-                        "requestCancelActivityTaskDecisionAttributes": {
-                            "activityId": activity_task["id"]
-                        },
-                    }
-                )
+            if events and events[-1]["eventType"] in running_event_types:
+                decision_attrs = {"activityId": activity_task["id"]}
+                decision = {
+                    "decisionType": "RequestCancelActivityTask",
+                    "requestCancelActivityTaskDecisionAttributes": decision_attrs,
+                }
+                decisions.append(decision)
+
+        # Cancel workflow
         decisions.append({"decisionType": "CancelWorkflowExecution"})
         self.decisions = decisions
 
@@ -164,12 +166,15 @@ class DAGBuilder(_base.DecisionsBuilder):
                 self._schedule_task(activity_task, event)
 
     def _process_new_events(self):
+        # Get new events
         event_ids = [event["eventId"] for event in self.task["events"]]
         current_idx = event_ids.index(self.task["startedEventId"])
         previous_idx = -1
         if self.task["previousStartedEventId"] in event_ids:
             previous_idx = event_ids.index(self.task["previousStartedEventId"])
-        events = self.task["events"][previous_idx + 1:current_idx + 1]
+        events = self.task["events"][previous_idx + 1 : current_idx + 1]
+
+        # Process events
         assert self.task["events"][-1]["eventType"] == "DecisionTaskStarted"
         assert self.task["events"][-2]["eventType"] == "DecisionTaskScheduled"
         for event in events[:-2]:

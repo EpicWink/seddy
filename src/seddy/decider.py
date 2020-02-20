@@ -47,14 +47,13 @@ class Decider:
             decision task
         """
 
+        _kwargs = {
+            "domain": self.domain,
+            "identity": self.identity,
+            "taskList": {"name": self.task_list},
+        }
         return _util.list_paginated(
-            self.client.poll_for_decision_task,
-            "events",
-            {
-                "domain": self.domain,
-                "identity": self.identity,
-                "taskList": {"name": self.task_list},
-            },
+            self.client.poll_for_decision_task, "events", _kwargs
         )
 
     def _make_decisions(self, task: t.Dict[str, t.Any]) -> t.List[t.Dict[str, t.Any]]:
@@ -110,13 +109,8 @@ class Decider:
 
     def _run_uncaught(self):
         """Run decider."""
-        logger.log(
-            25,
-            "Polling for tasks in domain '%s' with task-list '%s' as '%s'",
-            self.domain,
-            self.task_list,
-            self.identity,
-        )
+        _fmt = "Polling for tasks in domain '%s' with task-list '%s' as '%s'"
+        logger.log(25, _fmt, self.domain, self.task_list, self.identity)
         while True:
             self._poll_and_run()
 

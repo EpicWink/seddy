@@ -25,16 +25,20 @@ def list_workflows(domain: str, client) -> t.List[t.Tuple[str, str]]:
     """
 
     logger.info("Listing workflows in '%s'", domain)
+
+    # List registered workflows
+    _kwargs = {"domain": domain, "registrationStatus": "REGISTERED"}
     resp_registered = seddy_util.list_paginated(
-        client.list_workflow_types,
-        "typeInfos",
-        {"domain": domain, "registrationStatus": "REGISTERED"},
+        client.list_workflow_types, "typeInfos", _kwargs
     )
+
+    # List deprecated workflows
+    _kwargs = {"domain": domain, "registrationStatus": "DEPRECATED"}
     resp_deprecated = seddy_util.list_paginated(
-        client.list_workflow_types,
-        "typeInfos",
-        {"domain": domain, "registrationStatus": "DEPRECATED"},
+        client.list_workflow_types, "typeInfos", _kwargs
     )
+
+    # Combine
     workflows = resp_registered["typeInfos"] + resp_deprecated["typeInfos"]
     existing = [w["workflowType"] for w in workflows]
     return [(w["name"], w["version"]) for w in existing]
@@ -49,12 +53,10 @@ def register_workflow(workflow: seddy_decisions.Workflow, domain: str, client):
         client (botocore.client.BaseClient): SWF client
     """
 
-    logger.info(
-        "Registering workflow '%s' (version %s) on domain '%s'",
-        workflow.name,
-        workflow.version,
-        domain,
-    )
+    _fmt = "Registering workflow '%s' (version %s) on domain '%s'"
+    logger.info(_fmt, workflow.name, workflow.version, domain)
+
+    # Get registration options
     kwargs = {}
     if workflow.description is not None:
         kwargs["description"] = workflow.description
@@ -71,6 +73,8 @@ def register_workflow(workflow: seddy_decisions.Workflow, domain: str, client):
         # if "task_priority" in workflow.registration_defaults:
         #     _default = workflow.registration_defaults["task_priority"]
         #     kwargs["defaultTaskPriority"] = str(_default)
+
+    # Register
     client.register_workflow_type(
         domain=domain, name=workflow.name, version=workflow.version, **kwargs,
     )
@@ -91,15 +95,16 @@ def register_workflows(
 
     client = boto3.client("swf")
     logger.log(25, "Registering workflows in '%s'", domain)
+
+    # Get existing workflows
     existing = list_workflows(domain, client) if skip_existing else []
     logger.debug("Exising workflows: %s", existing)
+
+    # Register workflows
     for workflow in workflows:
         if (workflow.name, workflow.version) in existing:
-            logger.debug(
-                "Skipping existing workflow '%s' (version %s)",
-                workflow.name,
-                workflow.version,
-            )
+            _fmt = "Skipping existing workflow '%s' (version %s)"
+            logger.debug(_fmt, workflow.name, workflow.version)
             continue
         register_workflow(workflow, domain, client)
 

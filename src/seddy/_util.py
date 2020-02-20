@@ -31,19 +31,21 @@ def setup_logging(verbose: int):
         lg.basicConfig(level=level, format=fmt)
         return
 
+    field_styles = {
+        "asctime": {"faint": True, "color": "white"},
+        "levelname": {"bold": True, "color": "blue"},
+        "name": {"bold": True, "color": "yellow"},
+    }
+    level_styles = {
+        **coloredlogs.DEFAULT_LEVEL_STYLES,
+        "notice": {},
+        "info": {"color": "white"},
+    }
     coloredlogs.install(
         level=level,
         fmt=fmt,
-        field_styles={
-            "asctime": {"faint": True, "color": "white"},
-            "levelname": {"bold": True, "color": "blue"},
-            "name": {"bold": True, "color": "yellow"},
-        },
-        level_styles={
-            **coloredlogs.DEFAULT_LEVEL_STYLES,
-            "notice": {},
-            "info": {"color": "white"},
-        },
+        field_styles=field_styles,
+        level_styles=level_styles,
         milliseconds=True,
     )
     lg.root.setLevel(level)
