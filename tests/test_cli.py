@@ -168,13 +168,46 @@ def test_register(tmp_path):
 
 
 @pytest.mark.parametrize(
+    ("flags", "exp_args"),
+    [
+        pytest.param([], (None, None, None, None), id='""'),
+        pytest.param(
+            ["-t", "eggs", "-e", "60", "-d", "NONE", "-p", "ABANDON"],
+            ("eggs", 60, "NONE", "ABANDON"),
+            id='"-t eggs -e 60 -d NONE -p ABANDON"',
+        ),
+        pytest.param(
+            ["-t", "eggs", "-e60", "-d10", "-p", "TERMINATE"],
+            ("eggs", 60, 10, "TERMINATE"),
+            id='"-t eggs -e60 -d10 -p TERMINATE"',
+        ),
+        pytest.param(
+            [
+                "--task-list",
+                "eggs",
+                "--execution-timeout",
+                "60",
+                "--decision-timeout",
+                "10",
+                "--child-policy",
+                "REQUEST_CANCEL",
+            ],
+            ("eggs", 60, 10, "REQUEST_CANCEL"),
+            id=(
+                '"--task-list eggs --execution-timeout 60 --decision-timeout 10 '
+                '--child-policy REQUEST_CANCEL"'
+            ),
+        ),
+    ],
+)
+@pytest.mark.parametrize(
     ("input_json", "exp_input_json"),
     [
         pytest.param("input.json", pathlib.Path("input.json"), id="file"),
         pytest.param("-", 0, id="stdin"),
     ],
 )
-def test_execute(input_json, exp_input_json):
+def test_execute(input_json, exp_input_json, flags, exp_args):
     """Ensure workflow execution application is run correctly."""
     # Setup environment
     run_app_mock = mock.Mock()
@@ -182,11 +215,13 @@ def test_execute(input_json, exp_input_json):
 
     # Run function
     parser = seddy_main.build_parser()
-    args = parser.parse_args(["execute", "foo", "1.1", "eggs1234", "spam", input_json])
+    args = parser.parse_args(
+        ["execute", "foo", "1.1", "eggs1234", "spam", input_json] + flags
+    )
     with run_app_patch:
         seddy_main.run_app(args)
 
     # Check application input
     run_app_mock.assert_called_once_with(
-        "foo", "1.1", "eggs1234", "spam", exp_input_json
+        "foo", "1.1", "eggs1234", "spam", exp_input_json, *exp_args
     )

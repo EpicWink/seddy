@@ -61,6 +61,40 @@ def test_execute_workflow():
     }
 
 
+@moto.mock_swf
+def test_execute_workflow_with_all_optionals():
+    """Test workflow execution passing all optional arguments."""
+    # Setup environment
+    client = boto3.client("swf", region_name="us-east-1")
+    client.register_domain(name="spam", workflowExecutionRetentionPeriodInDays="2")
+    client.register_workflow_type(domain="spam", name="foo", version="1.1")
+    client.register_workflow_type(domain="spam", name="bar", version="0.42")
+
+    client_patch = mock.patch.object(boto3, "client", lambda x: {"swf": client}[x])
+
+    # Run function
+    with client_patch:
+        run_id = seddy_execute.execute_workflow(
+            "foo",
+            "1.1",
+            "eggs1234",
+            "spam",
+            {"a": None, "b": [17, 42]},
+            "eggs",
+            60,
+            "NONE",
+            "ABANDON",
+        )
+
+    # Check result
+    resp = client.poll_for_decision_task(
+        domain="spam", taskList={"name": "eggs"}, identity="superman",
+    )
+    assert resp["taskToken"]
+    assert resp["workflowExecution"] == {"workflowId": "eggs1234", "runId": run_id}
+    assert resp["workflowType"] == {"name": "foo", "version": "1.1"}
+
+
 def test_run_app(tmp_path, capsys):
     """Ensure workflow execution app is run correctly."""
     # Setup environment

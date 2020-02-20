@@ -34,6 +34,10 @@ def run_app(args: argparse.Namespace):
             args.execution_id,
             args.domain,
             args.input_json,
+            args.task_list,
+            args.execution_timeout,
+            args.decision_timeout,
+            args.child_policy,
         )
     else:  # pragma: no cover
         raise ValueError(args.command)
@@ -98,6 +102,28 @@ def build_parser() -> argparse.ArgumentParser:
         "input_json",
         type=lambda x: 0 if x == "-" else pathlib.Path(x),
         help="execution input JSON, '-' for stdin",
+    )
+    register_parser.add_argument(
+        "-t", "--task-list", metavar="NAME", help="decision task task-list")
+    register_parser.add_argument(
+        "-e",
+        "--execution-timeout",
+        type=int,
+        metavar="TIMEOUT",
+        help="execution time-out (seconds)",
+    )
+    register_parser.add_argument(
+        "-d",
+        "--decision-timeout",
+        type=lambda x: int(x) if x.isdigit() else x,
+        metavar="TIMEOUT",
+        help="decision task time-out (seconds), or 'NONE' for no time-out"
+    )
+    register_parser.add_argument(
+        "-p",
+        "--child-policy",
+        metavar="POLICY",
+        help="child execution close policy on termination",
     )
 
     return parser
