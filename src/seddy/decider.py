@@ -97,8 +97,7 @@ class Decider:
         task = self._poll_for_decision_task()
         if not task["taskToken"]:
             return
-        logger.log(
-            25,
+        logger.info(
             "Got decision task '%s' for workflow '%s-%s' execution '%s' (run '%s')",
             task["taskToken"],
             task["workflowType"]["name"],

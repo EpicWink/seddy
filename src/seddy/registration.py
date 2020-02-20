@@ -24,6 +24,7 @@ def list_workflows(domain: str, client) -> t.List[t.Tuple[str, str]]:
         names and versions of workflows in SWF
     """
 
+    logger.info("Listing workflows in '%s'", domain)
     resp_registered = seddy_util.list_paginated(
         client.list_workflow_types,
         "typeInfos",
@@ -49,7 +50,10 @@ def register_workflow(workflow: seddy_decisions.Workflow, domain: str, client):
     """
 
     logger.info(
-        "Registering workflow '%s' (version %s)" % (workflow.name, workflow.version)
+        "Registering workflow '%s' (version %s) on domain '%s'",
+        workflow.name,
+        workflow.version,
+        domain,
     )
     kwargs = {}
     if workflow.description is not None:
@@ -86,12 +90,15 @@ def register_workflows(
     """
 
     client = boto3.client("swf")
+    logger.log(25, "Registering workflows in '%s'", domain)
     existing = list_workflows(domain, client) if skip_existing else []
+    logger.debug("Exising workflows: %s", existing)
     for workflow in workflows:
         if (workflow.name, workflow.version) in existing:
             logger.debug(
-                "Skipping existing workflow '%s' (version %s)"
-                % (workflow.name, workflow.version)
+                "Skipping existing workflow '%s' (version %s)",
+                workflow.name,
+                workflow.version,
             )
             continue
         register_workflow(workflow, domain, client)
