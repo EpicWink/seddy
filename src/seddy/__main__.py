@@ -25,6 +25,16 @@ def run_app(args: argparse.Namespace):
         from . import registration
 
         registration.run_app(args.workflows_json, args.domain, args.skip_existing)
+    elif args.command == "execute":
+        from . import execute
+
+        execute.run_app(
+            args.workflow_name,
+            args.workflow_version,
+            args.execution_id,
+            args.domain,
+            args.input_json,
+        )
     else:  # pragma: no cover
         raise ValueError(args.command)
 
@@ -67,6 +77,27 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-existing",
         action="store_true",
         help="check for and skip existing workflows with the same name and version",
+    )
+
+    # Workflow execution
+    execute_parser = subparsers.add_parser(
+        "execute",
+        help="start SWF workflow execution",
+        description="Start SWF workflow execution.",
+        epilog="output: the execution run ID",
+    )
+    execute_parser.add_argument("workflow_name", help="name of workflow to start")
+    execute_parser.add_argument(
+        "workflow_version", help="version of workflow to start"
+    )
+    execute_parser.add_argument(
+        "execution_id", help="user-specified workflow execution ID"
+    )
+    execute_parser.add_argument("domain", help="SWF domain")
+    execute_parser.add_argument(
+        "input_json",
+        type=lambda x: 0 if x == "-" else pathlib.Path(x),
+        help="execution input JSON, '-' for stdin",
     )
 
     return parser

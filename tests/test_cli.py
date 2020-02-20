@@ -1,11 +1,13 @@
 """Test ``seddy`` command-line application."""
 
 import sys
+import pathlib
 import logging as lg
 from unittest import mock
 
 from seddy import __main__ as seddy_main
 from seddy import decider as seddy_decider
+from seddy import execute as seddy_execute
 from seddy import registration as seddy_registration
 import pytest
 import coloredlogs
@@ -91,6 +93,9 @@ def test_logging(
         pytest.param(
             ["register", "-h"], "Register workflows with SWF.", id='"decider -h"'
         ),
+        pytest.param(
+            ["execute", "-h"], "Start SWF workflow execution.", id='"execute -h"'
+        ),
     ],
 )
 def test_usage(decider_mock, command_line_args, capsys, description):
@@ -160,3 +165,28 @@ def test_register(tmp_path):
 
     # Check application input
     run_app_mock.assert_called_once_with(tmp_path / "workflows.json", "spam", True)
+
+
+@pytest.mark.parametrize(
+    ("input_json", "exp_input_json"),
+    [
+        pytest.param("input.json", pathlib.Path("input.json"), id="file"),
+        pytest.param("-", 0, id="stdin"),
+    ],
+)
+def test_execute(input_json, exp_input_json):
+    """Ensure workflow execution application is run correctly."""
+    # Setup environment
+    run_app_mock = mock.Mock()
+    run_app_patch = mock.patch.object(seddy_execute, "run_app", run_app_mock)
+
+    # Run function
+    parser = seddy_main.build_parser()
+    args = parser.parse_args(["execute", "foo", "1.1", "eggs1234", "spam", input_json])
+    with run_app_patch:
+        seddy_main.run_app(args)
+
+    # Check application input
+    run_app_mock.assert_called_once_with(
+        "foo", "1.1", "eggs1234", "spam", exp_input_json
+    )

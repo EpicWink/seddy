@@ -5,6 +5,7 @@ API reference
 
    seddy.decisions
    seddy.decider
+   seddy.execute
    seddy.registration
 
 .. automodule:: seddy
