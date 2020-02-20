@@ -1,7 +1,7 @@
-*seddy* - As-Built Production
-=============================
+*seddy* - SWF management
+========================
 
-Multi-workflow SWF decider service.
+Multi-workflow SWF decider and workflow management service.
 
 
 Installation
