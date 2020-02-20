@@ -58,7 +58,7 @@ class TestWorkflow:
             "name": "foo",
             "version": "0.42",
             "description": "Sunny-side up workflow.",
-            "spec_type": "eggs"
+            "spec_type": "eggs",
         }
 
     @pytest.fixture

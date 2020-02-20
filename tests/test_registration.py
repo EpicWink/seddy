@@ -16,12 +16,7 @@ def workflows():
     """Example workflow type specifications."""
     workflows = [
         seddy_decisions.DAGWorkflow("spam", "1.0", []),
-        seddy_decisions.DAGWorkflow(
-            "foo",
-            "0.42",
-            [],
-            "The best workflow, bar none.",
-        ),
+        seddy_decisions.DAGWorkflow("foo", "0.42", [], "The best workflow, bar none.",),
     ]
     workflows[1].registration_defaults = {
         "task_timeout": "NONE",
@@ -185,12 +180,7 @@ def test_run_app(tmp_path, workflows):
     workflows_spec = {
         "version": "1.0",
         "workflows": [
-            {
-                "spec_type": "dag",
-                "name": "spam",
-                "version": "1.0",
-                "tasks": [],
-            },
+            {"spec_type": "dag", "name": "spam", "version": "1.0", "tasks": [],},
             {
                 "spec_type": "dag",
                 "name": "foo",

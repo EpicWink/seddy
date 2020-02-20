@@ -17,5 +17,6 @@ def test_list_paginated():
 
     # Run function
     assert seddy_util.list_paginated(fn, "spam", kwargs) == {
-        "foo": "ababababababab", "spam": [0, 1, 2, 3, 4, 7, 9, 10, 42, 99]
+        "foo": "ababababababab",
+        "spam": [0, 1, 2, 3, 4, 7, 9, 10, 42, 99],
     }
