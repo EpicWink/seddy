@@ -26,7 +26,7 @@ class Decider:
 
     Attributes:
         client (botocore.client.BaseClient): SWF client
-        identity: name of decider to poll as
+        identity (str): name of decider to poll as
     """
 
     def __init__(
