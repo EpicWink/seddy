@@ -1,6 +1,7 @@
 """SWF decider service utilities."""
 
 import os
+import sys
 import typing as t
 import logging as lg
 
@@ -29,6 +30,9 @@ def setup_logging(verbose: int):
     lg.addLevelName(25, "NOTICE")
     level = LOGGING_LEVELS.get(verbose, lg.CRITICAL if verbose < 0 else lg.NOTSET)
     fmt = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
+
+    if level > lg.DEBUG:
+        sys.tracebacklimit = 0
 
     try:
         import coloredlogs
