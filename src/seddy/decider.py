@@ -7,8 +7,6 @@ import pathlib
 import typing as t
 import logging as lg
 
-import boto3
-
 from . import _util
 from . import decisions as seddy_decisions
 
@@ -35,7 +33,7 @@ class Decider:
         self.workflows = workflows
         self.domain = domain
         self.task_list = task_list
-        self.client = boto3.client("swf")
+        self.client = _util.get_swf_client()
         self.identity = socket.getfqdn() + "-" + str(uuid.uuid4())[:8]
 
     def _poll_for_decision_task(self) -> t.Dict[str, t.Any]:

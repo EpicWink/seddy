@@ -5,8 +5,6 @@ import pathlib
 import typing as t
 import logging as lg
 
-import boto3
-
 from . import _util as seddy_util
 from . import decisions as seddy_decisions
 
@@ -93,7 +91,7 @@ def register_workflows(
         skip_existing: check for and skip existing workflows
     """
 
-    client = boto3.client("swf")
+    client = seddy_util.get_swf_client()
     logger.log(25, "Registering workflows in '%s'", domain)
 
     # Get existing workflows

@@ -89,7 +89,7 @@ def test_register_workflows_all():
         domain="spam", workflowType={"name": "foo", "version": "1.0"}
     )
 
-    client_patch = mock.patch.object(boto3, "client", lambda x: {"swf": client}[x])
+    client_patch = mock.patch.object(boto3, "client", lambda x, **_: {"swf": client}[x])
 
     # Build input
     workflows = [
@@ -135,7 +135,7 @@ def test_register_workflows_skips_existing():
         domain="spam", workflowType={"name": "foo", "version": "1.0"}
     )
 
-    client_patch = mock.patch.object(boto3, "client", lambda x: {"swf": client}[x])
+    client_patch = mock.patch.object(boto3, "client", lambda x, **_: {"swf": client}[x])
 
     # Build input
     workflows = [

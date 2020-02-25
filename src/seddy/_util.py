@@ -1,10 +1,15 @@
 """SWF decider service utilities."""
 
+import os
 import typing as t
 import logging as lg
 
+import boto3
+
 from . import decisions as seddy_decisions
 
+logger = lg.getLogger(__package__)
+AWS_SWF_ENDPOINT_URL = os.environ.get("AWS_SWF_ENDPOINT_URL")
 LOGGING_LEVELS = {
     -2: lg.ERROR,
     -1: lg.WARNING,
@@ -118,3 +123,18 @@ def setup_workflows(workflows: t.List[seddy_decisions.Workflow]):
 
     for workflow in workflows:
         workflow.setup()
+
+
+def get_swf_client():
+    """Create an SWF client.
+
+    Uses ``AWS_SWF_ENDPOINT_URL`` from environment for the endpoint URL.
+
+    Returns:
+        botocore.client.BaseClient: SWF client
+    """
+
+    logger.debug(
+        "Creating SWF client with endpoint URL: %s", AWS_SWF_ENDPOINT_URL or "<default>"
+    )
+    return boto3.client("swf", endpoint_url=AWS_SWF_ENDPOINT_URL)
