@@ -49,7 +49,7 @@ class DAGBuilder(_base.DecisionsBuilder):
         if "timeout" in activity_task:
             decision_attributes["startToCloseTimeout"] = str(activity_task["timeout"])
         if "task_list" in activity_task:
-            decision_attributes["taskList"] = activity_task["task_list"]
+            decision_attributes["taskList"] = {"name": activity_task["task_list"]}
         if "priority" in activity_task:
             decision_attributes["taskPriority"] = str(activity_task["priority"])
 

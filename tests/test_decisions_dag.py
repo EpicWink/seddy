@@ -355,7 +355,7 @@ class TestDAGBuilder:
                         "heartbeatTimeout": "60",
                         "startToCloseTimeout": "86400",
                         "taskPriority": "1",
-                        "taskList": "eggs",
+                        "taskList": {"name": "eggs"},
                     },
                 },
             ]
