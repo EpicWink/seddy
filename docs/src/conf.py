@@ -2,6 +2,10 @@
 
 import pkg_resources
 
+from sphinx.ext import apidoc
+
+apidoc.main(["-eTf", "-t", "../templates", "-o", ".", "../../src"])  # gen API docs
+
 project = "seddy"
 copyright = "2020, SiteSee"
 author = "Laurie O"

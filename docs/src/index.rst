@@ -18,7 +18,7 @@ Documentation
 .. toctree::
    :maxdepth: 1
 
-   seddy
+   API Reference <seddy>
    cli
 
 * :ref:`genindex`
