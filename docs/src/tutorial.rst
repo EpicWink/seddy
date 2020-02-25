@@ -5,6 +5,18 @@ Running an SWF decider for a virtual AWS.
 
 We'll use `moto <https://github.com/spulec/moto>`_, a tool which mocks out SWF.
 
+.. warning::
+
+   ``moto`` v1.13.4 doesn't correctly support SWF. In particular:
+
+   * Task-polling returns instantly
+   * No-task result from task-polling is missing ``taskToken``, so ``seddy decider``
+     will crash whenever there is no result
+   * Decision tasks have incorrect value for ``previousStartedEventId``, so ``seddy
+     decider`` will crash after the two decision tasks
+
+   These are not issues when using ``seddy`` for real
+
 Set-up
 ------
 
