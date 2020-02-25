@@ -92,6 +92,7 @@ class Decider:
     def _poll_and_run(self):
         """Perform poll, and possibly run decision task."""
         task = self._poll_for_decision_task()
+        logger.debug("Decision task: %s", task)
         if not task["taskToken"]:
             return
         logger.info(

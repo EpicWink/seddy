@@ -2,9 +2,11 @@
 
 import json
 import typing as t
+import logging as lg
 
 from . import _base
 
+logger = lg.getLogger(__name__)
 _at_attr_keys = {
     "ActivityTaskCompleted": "activityTaskCompletedEventAttributes",
     "ActivityTaskFailed": "activityTaskFailedEventAttributes",
@@ -173,6 +175,7 @@ class DAGBuilder(_base.DecisionsBuilder):
         if self.task["previousStartedEventId"] in event_ids:
             previous_idx = event_ids.index(self.task["previousStartedEventId"])
         events = self.task["events"][previous_idx + 1 : current_idx + 1]
+        logger.debug("Processing %d events from event %d", len(events), current_idx)
 
         # Process events
         assert self.task["events"][-1]["eventType"] == "DecisionTaskStarted"
