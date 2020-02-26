@@ -3,3 +3,4 @@ pytest-cov
 coloredlogs
 moto
 pyyaml
+python-json-logger
