@@ -22,17 +22,13 @@ See the [issues page](https://github.com/EpicWink/seddy/issues) for the current
 discussions on improvements, features and bugs.
 
 ## Generating documentation
-When the package structure is changed (moved/deleted/new packages/modules), the
-documentation configuration must be regenerated:
+A simple Makefile handles the pre-requisites installation, documentation markup
+generation and documentation generation.
 ```bash
-sphinx-apidoc -ef -o docs/src/ src/seddy/ --ext-autodoc
+make -C docs
 ```
 
-To build the documentation:
-```bash
-cd docs/
-make
-```
+Output documentation is in "docs/build/html".
 
 ## Code of conduct
 Please note that this project is released with a [Contributor Code of Conduct](
