@@ -1,6 +1,5 @@
 """SWF decider."""
 
-import json
 import uuid
 import socket
 import pathlib
@@ -130,7 +129,7 @@ def run_app(workflows_spec_file: pathlib.Path, domain: str, task_list: str):
         task_list: SWF decider task-list
     """
 
-    decider_spec = json.loads(workflows_spec_file.read_text())
+    decider_spec = _util.load_workflows(workflows_spec_file)
     workflows = _util.construct_workflows(decider_spec)
     _util.setup_workflows(workflows)
     decider = Decider(workflows, domain, task_list)

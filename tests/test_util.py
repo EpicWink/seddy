@@ -1,6 +1,9 @@
 """Test ``seddy._util``."""
 
+import json
+
 from seddy import _util as seddy_util
+import pytest
 
 
 def test_list_paginated():
@@ -20,3 +23,49 @@ def test_list_paginated():
         "foo": "ababababababab",
         "spam": [0, 1, 2, 3, 4, 7, 9, 10, 42, 99],
     }
+
+
+@pytest.fixture
+def workflows_spec():
+    """Example workflows specifications."""
+    return {
+        "version": "1.0",
+        "workflows": [
+            {
+                "spec_type": "dag",
+                "name": "spam",
+                "version": "1.0",
+                "tasks": [
+                    {
+                        "id": "foo",
+                        "type": {"name": "spam-foo", "version": "0.3"},
+                        "heartbeat": "60",
+                        "timeout": "86400",
+                        "task_list": "eggs",
+                        "priority": "1",
+                    }
+                ],
+            }
+        ],
+    }
+
+
+def test_load_workflows_json(tmp_path, workflows_spec):
+    """Test workflows specs loading from JSON."""
+    # Build input
+    workflows_file = tmp_path / "workflows.json"
+    workflows_file.write_text(json.dumps(workflows_spec))
+
+    # Run function
+    assert seddy_util.load_workflows(workflows_file) == workflows_spec
+
+
+def test_load_workflows_with_incorrect_suffix(tmp_path, workflows_spec):
+    """Test workflows specs loading raises for incorrect suffix."""
+    # Build input
+    workflows_file = tmp_path / "workflows.spam"
+    workflows_file.write_text(str(workflows_spec))
+
+    # Run function
+    with pytest.raises(ValueError):
+        seddy_util.load_workflows(workflows_file)

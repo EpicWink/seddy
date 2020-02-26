@@ -1,6 +1,5 @@
 """SWF workflow registration."""
 
-import json
 import pathlib
 import typing as t
 import logging as lg
@@ -118,6 +117,6 @@ def run_app(
         skip_existing: check for and skip existing workflows
     """
 
-    workflows_spec = json.loads(workflows_spec_file.read_text())
+    workflows_spec = seddy_util.load_workflows(workflows_spec_file)
     workflows = seddy_util.construct_workflows(workflows_spec)
     register_workflows(workflows, domain, skip_existing)

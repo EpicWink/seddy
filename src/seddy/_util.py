@@ -2,6 +2,8 @@
 
 import os
 import sys
+import json
+import pathlib
 import typing as t
 import logging as lg
 
@@ -142,3 +144,24 @@ def get_swf_client():
         "Creating SWF client with endpoint URL: %s", AWS_SWF_ENDPOINT_URL or "<default>"
     )
     return boto3.client("swf", endpoint_url=AWS_SWF_ENDPOINT_URL)
+
+
+def load_workflows(workflows_file: pathlib.Path) -> t.Dict[str, t.Any]:
+    """Load workflows specifications file.
+
+    Determines load method from the file suffix. Supported file types:
+
+    * JSON
+
+    Args:
+        workflows_file: workflows specifications file path
+
+    Returns:
+        workflows specifications
+    """
+
+    logger.info("Loading workflows specifictions from '%s'", workflows_file)
+    workflows_text = workflows_file.read_text()
+    if workflows_file.suffix == ".json":
+        return json.loads(workflows_text)
+    raise ValueError("Unknown extension: %s" % workflows_file.suffix)
