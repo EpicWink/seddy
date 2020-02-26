@@ -44,14 +44,14 @@ class TestDecider:
 
     @pytest.fixture
     def instance(self, workflow_mocks, aws_environment):
-        return seddy_decider.Decider(workflow_mocks, "spam", "eggs")
+        return seddy_decider.Decider(workflow_mocks, "spam", "eggs", "abcd1234")
 
     def test_init(self, instance, workflow_mocks):
         assert instance.workflows == workflow_mocks
         assert instance.domain == "spam"
         assert instance.task_list == "eggs"
         assert isinstance(instance.client, botocore_client.BaseClient)
-        assert instance.identity
+        assert instance.identity == "abcd1234"
 
     @moto.mock_swf
     def test_poll_for_decision_task(self, instance):
@@ -338,10 +338,10 @@ def test_run_app(tmp_path):
 
     # Run function
     with decider_class_patch:
-        seddy_decider.run_app(workflows_spec_json, "spam", "eggs")
+        seddy_decider.run_app(workflows_spec_json, "spam", "eggs", "abcd1234")
 
     # Check decider configuration
-    decider_class_mock.assert_called_once_with(mock.ANY, "spam", "eggs")
+    decider_class_mock.assert_called_once_with(mock.ANY, "spam", "eggs", "abcd1234")
     decider_class_mock.return_value.run.assert_called_once_with()
 
     workflows = decider_class_mock.call_args_list[0][0][0]

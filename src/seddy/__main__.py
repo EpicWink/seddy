@@ -25,7 +25,7 @@ def run_app(args: argparse.Namespace):
     if args.command == "decider":
         from . import decider
 
-        decider.run_app(args.workflows_file, args.domain, args.task_list)
+        decider.run_app(args.workflows_file, args.domain, args.task_list, args.identity)
     elif args.command == "register":
         from . import registration
 
@@ -63,6 +63,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     decider_parser.add_argument("domain", help="SWF domain")
     decider_parser.add_argument("task_list", help="SWF decider task-list")
+    decider_parser.add_argument(
+        "-i",
+        "--identity",
+        metavar="NAME",
+        help="decider identity, default: automatically generated",
+    )
 
     # Workflows registration
     register_parser = subparsers.add_parser(

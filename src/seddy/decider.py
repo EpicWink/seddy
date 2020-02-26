@@ -20,6 +20,8 @@ class Decider:
         workflows: decider workflows
         domain: SWF domain to poll in
         task_list: SWF decider task-list
+        identity: decider identity, default: automatically generated from
+            fully-qualified domain-name and a UUID
 
     Attributes:
         client (botocore.client.BaseClient): SWF client
@@ -27,13 +29,17 @@ class Decider:
     """
 
     def __init__(
-        self, workflows: t.List[seddy_decisions.Workflow], domain: str, task_list: str,
+        self,
+        workflows: t.List[seddy_decisions.Workflow],
+        domain: str,
+        task_list: str,
+        identity: str = None
     ):
         self.workflows = workflows
         self.domain = domain
         self.task_list = task_list
         self.client = _util.get_swf_client()
-        self.identity = socket.getfqdn() + "-" + str(uuid.uuid4())[:8]
+        self.identity = identity or (socket.getfqdn() + "-" + str(uuid.uuid4())[:8])
 
     def _poll_for_decision_task(self) -> t.Dict[str, t.Any]:
         """Poll for a decision task from SWF.
@@ -120,17 +126,20 @@ class Decider:
             logger.info("Quitting due to keyboard-interrupt")
 
 
-def run_app(workflows_spec_file: pathlib.Path, domain: str, task_list: str):
+def run_app(
+    workflows_spec_file: pathlib.Path, domain: str, task_list: str, identity: str = None
+):
     """Run decider application.
 
     Arguments:
         workflows_spec_file: workflows specifications file path
         domain: SWF domain
         task_list: SWF decider task-list
+        identity: decider identity, default: automatically generated
     """
 
     decider_spec = _util.load_workflows(workflows_spec_file)
     workflows = _util.construct_workflows(decider_spec)
     _util.setup_workflows(workflows)
-    decider = Decider(workflows, domain, task_list)
+    decider = Decider(workflows, domain, task_list, identity)
     decider.run()

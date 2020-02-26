@@ -163,17 +163,26 @@ def test_version(decider_mock, command_line_args, capsys):
     assert res_out.strip() == pkg_resources.get_distribution("seddy").version
 
 
-def test_decider(decider_mock, tmp_path):
+@pytest.mark.parametrize(
+    ("args_extra", "decider_args"),
+    [
+        pytest.param([], [None], id='""'),
+        pytest.param(["-i", "abcd1234"], ["abcd1234"], id='"-i abcd1234"'),
+    ],
+)
+def test_decider(decider_mock, tmp_path, args_extra, decider_args):
     """Ensure decider application is run with the correct input."""
     # Run function
     parser = seddy_main.build_parser()
     args = parser.parse_args(
-        ["decider", str(tmp_path / "workflows.json"), "spam", "eggs"]
+        ["decider", str(tmp_path / "workflows.json"), "spam", "eggs"] + args_extra
     )
     seddy_main.run_app(args)
 
     # Check application input
-    decider_mock.assert_called_once_with(tmp_path / "workflows.json", "spam", "eggs")
+    decider_mock.assert_called_once_with(
+        tmp_path / "workflows.json", "spam", "eggs", *decider_args
+    )
 
 
 def test_register(tmp_path):
