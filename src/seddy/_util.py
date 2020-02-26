@@ -9,14 +9,6 @@ import logging as lg
 
 import boto3
 
-try:
-    import yaml
-except ImportError as e:  # pragma: no cover
-    try:
-        from ruamel import yaml
-    except ImportError:
-        yaml = e
-
 from . import decisions as seddy_decisions
 
 logger = lg.getLogger(__package__)
@@ -174,7 +166,12 @@ def load_workflows(workflows_file: pathlib.Path) -> t.Dict[str, t.Any]:
     if workflows_file.suffix == ".json":
         return json.loads(workflows_text)
     elif workflows_file.suffix in (".yml", ".yaml"):
-        if isinstance(yaml, Exception):
-            raise yaml
+        try:
+            import yaml
+        except ImportError as e:
+            try:
+                from ruamel import yaml
+            except ImportError as er:
+                raise e from er
         return yaml.safe_load(workflows_text)
     raise ValueError("Unknown extension: %s" % workflows_file.suffix)

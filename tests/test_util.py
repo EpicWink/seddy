@@ -1,5 +1,6 @@
 """Test ``seddy._util``."""
 
+import sys
 import json
 from unittest import mock
 
@@ -75,17 +76,15 @@ def test_load_workflows_yaml(tmp_path, workflows_spec):
 def test_load_workflows_yaml_raises(tmp_path, workflows_spec):
     """Test workflows specs loading from YAML raises when unavailable."""
     # Setup environment
-    yaml_exc = ModuleNotFoundError("yaml")
-    yaml_patch = mock.patch.object(seddy_util, "yaml", yaml_exc)
+    yaml_patch = mock.patch.dict(sys.modules, {"yaml": None, "ruamel.yaml": None})
 
     # Build input
     workflows_file = tmp_path / "workflows.yml"
     workflows_file.write_text(yaml.safe_dump(workflows_spec))
 
     # Run function
-    with pytest.raises(ModuleNotFoundError) as e, yaml_patch:
+    with pytest.raises(ModuleNotFoundError), yaml_patch:
         seddy_util.load_workflows(workflows_file)
-    assert e.value == yaml_exc
 
 
 def test_load_workflows_with_incorrect_suffix(tmp_path, workflows_spec):
