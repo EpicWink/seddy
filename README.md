@@ -39,3 +39,9 @@ pydoc3 seddy
 ```
 
 See [the example DAG workflow definition](tests/data/dag.json).
+
+## Docker
+Instead of installing `seddy` locally, you can use our pre-built Docker image
+```bash
+docker run -v /path/to/workflow/file/parent:/seddy-data seddy -h
+```
