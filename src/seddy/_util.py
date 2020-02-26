@@ -36,6 +36,7 @@ def setup_logging(verbose: int, json_logging: bool = False):
 
     if json_logging:
         from pythonjsonlogger import jsonlogger
+
         handler = lg.StreamHandler()
         formatter = jsonlogger.JsonFormatter(
             "%(levelname)s %(name)s %(message)s", timestamp=True

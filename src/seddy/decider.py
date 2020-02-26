@@ -33,7 +33,7 @@ class Decider:
         workflows: t.List[seddy_decisions.Workflow],
         domain: str,
         task_list: str,
-        identity: str = None
+        identity: str = None,
     ):
         self.workflows = workflows
         self.domain = domain
