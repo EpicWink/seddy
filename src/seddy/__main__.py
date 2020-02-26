@@ -20,11 +20,11 @@ def run_app(args: argparse.Namespace):
     if args.command == "decider":
         from . import decider
 
-        decider.run_app(args.workflows_json, args.domain, args.task_list)
+        decider.run_app(args.workflows_file, args.domain, args.task_list)
     elif args.command == "register":
         from . import registration
 
-        registration.run_app(args.workflows_json, args.domain, args.skip_existing)
+        registration.run_app(args.workflows_file, args.domain, args.skip_existing)
     else:  # pragma: no cover
         raise ValueError(args.command)
 
@@ -47,7 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
         "decider", help="run SWF decider", description="Run SWF decider."
     )
     decider_parser.add_argument(
-        "workflows_json", type=pathlib.Path, help="workflows specifications JSON"
+        "workflows_file", type=pathlib.Path, help="workflows specifications file path"
     )
     decider_parser.add_argument("domain", help="SWF domain")
     decider_parser.add_argument("task_list", help="SWF decider task-list")
@@ -59,7 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Register workflows with SWF.",
     )
     register_parser.add_argument(
-        "workflows_json", type=pathlib.Path, help="workflows specifications JSON"
+        "workflows_file", type=pathlib.Path, help="workflows specifications file path"
     )
     register_parser.add_argument("domain", help="SWF domain")
     register_parser.add_argument(

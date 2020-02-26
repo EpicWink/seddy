@@ -108,16 +108,16 @@ def register_workflows(
 
 
 def run_app(
-    workflows_spec_json: pathlib.Path, domain: str, skip_existing: bool = False
+    workflows_spec_file: pathlib.Path, domain: str, skip_existing: bool = False
 ):
     """Run decider application.
 
     Arguments:
-        workflows_spec_json: workflows specifications JSON
+        workflows_spec_file: workflows specifications file path
         domain: SWF domain
         skip_existing: check for and skip existing workflows
     """
 
-    workflows_spec = json.loads(workflows_spec_json.read_text())
+    workflows_spec = json.loads(workflows_spec_file.read_text())
     workflows = seddy_util.construct_workflows(workflows_spec)
     register_workflows(workflows, domain, skip_existing)
