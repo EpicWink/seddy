@@ -22,10 +22,9 @@ Features:
 pip3 install seddy
 ```
 
-For coloured logging
-```bash
-pip3 install coloredlogs
-```
+Install extra packages for further functionality
+* Coloured logging: ``coloredlogs``
+* YAML workflows specs file: ``pyyaml`` or ``ruamel.yaml``
 
 ## Usage
 Get the CLI usage

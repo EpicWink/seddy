@@ -2,3 +2,4 @@ pytest
 pytest-cov
 coloredlogs
 moto
+pyyaml

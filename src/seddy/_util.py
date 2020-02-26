@@ -9,6 +9,14 @@ import logging as lg
 
 import boto3
 
+try:
+    import yaml
+except ImportError as e:  # pragma: no cover
+    try:
+        from ruamel import yaml
+    except ImportError:
+        yaml = e
+
 from . import decisions as seddy_decisions
 
 logger = lg.getLogger(__package__)
@@ -152,6 +160,7 @@ def load_workflows(workflows_file: pathlib.Path) -> t.Dict[str, t.Any]:
     Determines load method from the file suffix. Supported file types:
 
     * JSON
+    * YAML
 
     Args:
         workflows_file: workflows specifications file path
@@ -164,4 +173,8 @@ def load_workflows(workflows_file: pathlib.Path) -> t.Dict[str, t.Any]:
     workflows_text = workflows_file.read_text()
     if workflows_file.suffix == ".json":
         return json.loads(workflows_text)
+    elif workflows_file.suffix in (".yml", ".yaml"):
+        if isinstance(yaml, Exception):
+            raise yaml
+        return yaml.safe_load(workflows_text)
     raise ValueError("Unknown extension: %s" % workflows_file.suffix)
