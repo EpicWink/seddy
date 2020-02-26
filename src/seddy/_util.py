@@ -174,4 +174,10 @@ def load_workflows(workflows_file: pathlib.Path) -> t.Dict[str, t.Any]:
             except ImportError as er:
                 raise e from er
         return yaml.safe_load(workflows_text)
+    elif workflows_file.suffix == ".toml":
+        try:
+            import toml
+        except ImportError:
+            raise
+        return toml.loads(workflows_text)
     raise ValueError("Unknown extension: %s" % workflows_file.suffix)

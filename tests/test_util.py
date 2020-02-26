@@ -7,6 +7,7 @@ from unittest import mock
 from seddy import _util as seddy_util
 import pytest
 import yaml
+import toml
 
 
 def test_list_paginated():
@@ -84,6 +85,36 @@ def test_load_workflows_yaml_raises(tmp_path, workflows_spec):
 
     # Run function
     with pytest.raises(ModuleNotFoundError), yaml_patch:
+        seddy_util.load_workflows(workflows_file)
+
+
+def test_load_workflows_toml(tmp_path, workflows_spec):
+    """Test workflows specs loading from TOML."""
+    # Build input
+    workflows_file = tmp_path / "workflows.yml"
+    workflows_file.write_text(toml.dumps(workflows_spec))
+    print(workflows_file.read_text())
+
+    # Run function
+    res = seddy_util.load_workflows(workflows_file)
+    print(workflows_spec)
+    print(res)
+    print(json.dumps(workflows_spec, indent=4))
+    print(json.dumps(res, indent=4))
+    assert res == workflows_spec
+
+
+def test_load_workflows_toml_raises(tmp_path, workflows_spec):
+    """Test workflows specs loading from TOML raises when unavailable."""
+    # Setup environment
+    toml_patch = mock.patch.dict(sys.modules, {"toml": None})
+
+    # Build input
+    workflows_file = tmp_path / "workflows.toml"
+    workflows_file.write_text(toml.dumps(workflows_spec))
+
+    # Run function
+    with pytest.raises(ModuleNotFoundError), toml_patch:
         seddy_util.load_workflows(workflows_file)
 
 
