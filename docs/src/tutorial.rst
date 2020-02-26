@@ -20,11 +20,11 @@ We'll use `moto <https://github.com/spulec/moto>`_, a tool which mocks out SWF.
 Set-up
 ------
 
-Install ``moto``, ``awscli`` and ``seddy``
+Install Moto, AWS CLI, `PyYaml <https://github.com/yaml/pyyaml>`_ and seddy
 
 .. code-block:: shell
 
-   pip install moto[server] awscli seddy
+   pip install moto[server] awscli pyyaml seddy
 
 .. _env-vars:
 
@@ -47,10 +47,10 @@ Create workflow definitions file
 .. raw:: html
 
    <details>
-   <summary><a>workflows.json</a></summary>
+   <summary><a>workflows.yml</a></summary>
 
-.. include:: workflows.json
-   :code: json
+.. include:: workflows.yml
+   :code: yaml
 
 .. raw:: html
 
@@ -79,7 +79,7 @@ Register defined workflows with SWF
 
 .. code-block:: shell
 
-   seddy -v register workflows.json test-domain
+   seddy -v register workflows.yml test-domain
 
 ----
 
@@ -113,7 +113,7 @@ Start the decider (in a separate terminal: don't forget :ref:`env-vars`)
 
 .. code-block:: shell
 
-   seddy -v decider workflows.json test-domain test-list
+   seddy -v decider workflows.yml test-domain test-list
 
 ----
 
