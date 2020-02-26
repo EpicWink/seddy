@@ -1,6 +1,7 @@
 """Test ``seddy`` command-line application."""
 
 import sys
+import json
 import logging as lg
 from unittest import mock
 
@@ -75,6 +76,37 @@ def test_logging(
 
     root_logger.critical("spam")
     assert capsys.readouterr().err[24:] == "[CRITICAL] root: spam\n"
+
+
+@pytest.mark.parametrize(
+    "coloredlogs_module",
+    [
+        pytest.param(None, id="no-coloredlogs"),
+        pytest.param(coloredlogs, id="coloredlogs"),
+    ],
+)
+def test_json_logging(decider_mock, tmp_path, coloredlogs_module, capsys):
+    """Ensure JSON logging configuration is set up correctly."""
+    # Setup environment
+    root_logger = lg.RootLogger("WARNING")
+    root_logger_patch = mock.patch.object(lg, "root", root_logger)
+
+    # Run function
+    parser = seddy_main.build_parser()
+    args = parser.parse_args(
+        ["-J", "decider", str(tmp_path / "workflows.json"), "spam", "eggs"]
+    )
+    with root_logger_patch:
+        seddy_main.run_app(args)
+
+    # Check logging configuration
+    root_logger.warning("spam %s", "eggs")
+    assert json.loads(capsys.readouterr().err) == {
+        "levelname": "WARNING",
+        "name": "root",
+        "timestamp": mock.ANY,
+        "message": "spam eggs",
+    }
 
 
 @pytest.mark.parametrize(

@@ -6,6 +6,11 @@ import argparse
 import pkg_resources
 
 try:
+    from pythonjsonlogger import jsonlogger
+except ImportError as e:  # pragma: no cover
+    jsonlogger = e
+
+try:
     version = pkg_resources.get_distribution("seddy").version
 except pkg_resources.DistributionNotFound:  # pragma: no cover
     version = None
@@ -15,7 +20,7 @@ def run_app(args: argparse.Namespace):
     """Run application from parsed command-line arguments."""
     from . import _util
 
-    _util.setup_logging(args.verbose - args.quiet)
+    _util.setup_logging(args.verbose - args.quiet, args.json_logging)
 
     if args.command == "decider":
         from . import decider
@@ -38,6 +43,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-q", "--quiet", action="count", default=0, help="decrease logging verbosity"
     )
+    if not isinstance(jsonlogger, Exception):
+        parser.add_argument(
+            "-J",
+            "--json-logging",
+            action="store_true",
+            help="JSON-format logs (coloured-logging disabled)",
+        )
     parser.add_argument("-V", "--version", action="version", version=version)
     subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
     subparsers.required = True

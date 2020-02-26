@@ -25,6 +25,7 @@ pip3 install seddy
 Install extra packages for further functionality
 * Coloured logging: ``coloredlogs``
 * YAML workflows specs file: ``pyyaml`` or ``ruamel.yaml``
+* JSON-format logging: ``python-json-logger``
 
 ## Usage
 Get the CLI usage

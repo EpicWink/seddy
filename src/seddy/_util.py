@@ -22,16 +22,27 @@ LOGGING_LEVELS = {
 }
 
 
-def setup_logging(verbose: int):
+def setup_logging(verbose: int, json_logging: bool = False):
     """Setup logging.
 
     Args:
         verbose: logging verbosity
+        json_logging: JSON-format logs
     """
 
     lg.addLevelName(25, "NOTICE")
     level = LOGGING_LEVELS.get(verbose, lg.CRITICAL if verbose < 0 else lg.NOTSET)
     fmt = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
+
+    if json_logging:
+        from pythonjsonlogger import jsonlogger
+        handler = lg.StreamHandler()
+        formatter = jsonlogger.JsonFormatter(
+            "%(levelname)s %(name)s %(message)s", timestamp=True
+        )
+        handler.setFormatter(formatter)
+        lg.basicConfig(level=level, handlers=[handler])
+        return
 
     if level > lg.DEBUG:
         sys.tracebacklimit = 0
