@@ -42,7 +42,7 @@ class DAGBuilder(_base.DecisionsBuilder):
         }
 
         input_ = json.loads(attrs.get("input", "null"))
-        if input_:
+        if input_ and activity_task["id"] in input_:
             decision_attributes["input"] = json.dumps(input_[activity_task["id"]])
         if "heartbeat" in activity_task:
             decision_attributes["heartbeatTimeout"] = str(activity_task["heartbeat"])

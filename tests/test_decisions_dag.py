@@ -37,6 +37,13 @@ class TestDAGBuilder:
                         "timeout": 86400,
                         "dependencies": ["foo"],
                     },
+                    {
+                        "id": "tin",
+                        "type": {"name": "spam-tin", "version": "1.2"},
+                        "heartbeat": 30,
+                        "timeout": 43200,
+                        "dependencies": ["yay"],
+                    },
                 ],
                 "type": "dag",
             }
@@ -52,6 +59,7 @@ class TestDAGBuilder:
             "foo-complete-yay-unsatisfied",
             "yay-complete",
             "bar-complete",
+            "tin-complete",
             "bar-and-yay-complete",
             "foo-failed",
             "foo-timed-out",
@@ -164,14 +172,38 @@ class TestDAGBuilder:
             {"eventId": 18, "eventType": "DecisionTaskCompleted"},
             {
                 "eventId": 19,
+                "eventType": "ActivityTaskScheduled",
+                "activityTaskScheduledEventAttributes": {
+                    "activityId": "tin",
+                    "activityType": {"name": "spam-tin", "version": "1.2"},
+                    "decisionTaskCompletedEventId": 18,
+                },
+            },
+            {
+                "eventId": 20,
+                "eventType": "ActivityTaskStarted",
+                "activityTaskStartedEventAttributes": {"scheduledEventId": 19},
+            },
+            {
+                "eventId": 21,
                 "eventType": "ActivityTaskCompleted",
                 "activityTaskCompletedEventAttributes": {
                     "scheduledEventId": 12,
                     "result": '{"a": 9, "b": "red"}',
                 },
             },
-            {"eventId": 20, "eventType": "DecisionTaskScheduled"},
-            {"eventId": 21, "eventType": "DecisionTaskStarted"},
+            {"eventId": 22, "eventType": "DecisionTaskScheduled"},
+            {"eventId": 23, "eventType": "DecisionTaskStarted"},
+        ]
+        tin_complete_events = [
+            {"eventId": 24, "eventType": "DecisionTaskCompleted"},
+            {
+                "eventId": 25,
+                "eventType": "ActivityTaskCompleted",
+                "activityTaskCompletedEventAttributes": {"scheduledEventId": 19},
+            },
+            {"eventId": 26, "eventType": "DecisionTaskScheduled"},
+            {"eventId": 27, "eventType": "DecisionTaskStarted"},
         ]
         bar_and_yay_complete_events = [
             {"eventId": 10, "eventType": "DecisionTaskCompleted"},
@@ -419,7 +451,7 @@ class TestDAGBuilder:
                     },
                 },
             ]
-        elif request.param == "yay-complete":
+        elif request.param in "yay-complete":
             task = {
                 "taskToken": "spam",
                 "previousStartedEventId": foo_complete_events[-1]["eventId"],
@@ -428,7 +460,17 @@ class TestDAGBuilder:
                     workflow_start_events + foo_complete_events + yay_complete_events
                 ),
             }
-            expected_decisions = []
+            expected_decisions = [
+                {
+                    "decisionType": "ScheduleActivityTask",
+                    "scheduleActivityTaskDecisionAttributes": {
+                        "activityId": "tin",
+                        "activityType": {"name": "spam-tin", "version": "1.2"},
+                        "heartbeatTimeout": "30",
+                        "startToCloseTimeout": "43200",
+                    },
+                },
+            ]
         elif request.param == "bar-complete":
             task = {
                 "taskToken": "spam",
@@ -439,6 +481,20 @@ class TestDAGBuilder:
                     + foo_complete_events
                     + yay_complete_events
                     + bar_complete_events
+                ),
+            }
+            expected_decisions = []
+        elif request.param == "tin-complete":
+            task = {
+                "taskToken": "spam",
+                "previousStartedEventId": bar_complete_events[-1]["eventId"],
+                "startedEventId": tin_complete_events[-1]["eventId"],
+                "events": (
+                    workflow_start_events
+                    + foo_complete_events
+                    + yay_complete_events
+                    + bar_complete_events
+                    + tin_complete_events
                 ),
             }
             expected_decisions = [
@@ -462,11 +518,14 @@ class TestDAGBuilder:
             }
             expected_decisions = [
                 {
-                    "decisionType": "CompleteWorkflowExecution",
-                    "completeWorkflowExecutionDecisionAttributes": {
-                        "result": '{"foo": 3, "bar": {"a": 9, "b": "red"}, "yay": 5}'
+                    "decisionType": "ScheduleActivityTask",
+                    "scheduleActivityTaskDecisionAttributes": {
+                        "activityId": "tin",
+                        "activityType": {"name": "spam-tin", "version": "1.2"},
+                        "heartbeatTimeout": "30",
+                        "startToCloseTimeout": "43200",
                     },
-                }
+                },
             ]
         elif request.param == "foo-failed":
             task = {
