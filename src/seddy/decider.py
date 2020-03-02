@@ -9,6 +9,11 @@ import logging as lg
 from . import _util
 from . import decisions as seddy_decisions
 
+try:
+    import sentry_sdk
+except ImportError as e:
+    sentry_sdk = e
+
 logger = lg.getLogger(__name__)
 socket.setdefaulttimeout(70.0)
 
@@ -124,6 +129,29 @@ class Decider:
             self._run_uncaught()
         except KeyboardInterrupt:
             logger.info("Quitting due to keyboard-interrupt")
+
+
+def _setup_sentry(decider: Decider):  # TODO: unit-test
+    """Initialise Sentry."""
+    if isinstance(sentry_sdk, Exception):
+        return
+    # release = "{}@{}".format(self.workflow.name, self.workflow.version)
+    release = None
+    environment = decider.domain
+    tags = {
+        "identity": decider.identity,
+        # "workflow-name": self.workflow.name,
+        # "workflow-version": self.workflow.version
+    }
+
+    extra = {}
+
+    sentry_sdk.init(release=release, environment=environment)
+    _sentry_init = True
+
+    with sentry_sdk.configure_scope() as s:
+        [s.set_tag(k, v) for k, v in tags.items()]
+        [s.set_extra(k, v) for k, v in extra.items()]
 
 
 def run_app(
