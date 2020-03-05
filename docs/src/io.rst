@@ -1,9 +1,10 @@
-Data exchange
-=============
+Data exchange in executions
+===========================
 
 .. seealso::
 
-   `SWF documentation <https://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-actors.html#swf-dev-actors-dataex>`_
+   `Data exchange SWF documentation
+   <https://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-actors.html#swf-dev-actors-dataex>`_
 
 *seddy* assumes all workflow input and output is JSON-serialisable, and will be
 manipulated as such according to task IDs. The task ID is used as key for the task input
