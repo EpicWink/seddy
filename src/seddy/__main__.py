@@ -29,7 +29,7 @@ def run_app(args: argparse.Namespace):
     elif args.command == "register":
         from . import registration
 
-        registration.run_app(args.workflows_file, args.domain, args.skip_existing)
+        registration.run_app(args.workflows_file, args.domain)
     else:  # pragma: no cover
         raise ValueError(args.command)
 
@@ -73,19 +73,13 @@ def build_parser() -> argparse.ArgumentParser:
     # Workflows registration
     register_parser = subparsers.add_parser(
         "register",
-        help="register workflows with SWF",
-        description="Register workflows with SWF.",
+        help="synchronise workflow registration status with SWF",
+        description="Synchronise workflow registration status with SWF.",
     )
     register_parser.add_argument(
         "workflows_file", type=pathlib.Path, help="workflows specifications file path"
     )
     register_parser.add_argument("domain", help="SWF domain")
-    register_parser.add_argument(
-        "-s",
-        "--skip-existing",
-        action="store_true",
-        help="check for and skip existing workflows with the same name and version",
-    )
 
     return parser
 

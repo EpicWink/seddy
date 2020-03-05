@@ -121,7 +121,9 @@ def test_json_logging(decider_mock, tmp_path, coloredlogs_module, capsys):
             id='"decider a.json spam eggs -h"',
         ),
         pytest.param(
-            ["register", "-h"], "Register workflows with SWF.", id='"register -h"'
+            ["register", "-h"],
+            "Synchronise workflow registration status with SWF.",
+            id='"register -h"',
         ),
     ],
 )
@@ -193,11 +195,9 @@ def test_register(tmp_path):
 
     # Run function
     parser = seddy_main.build_parser()
-    args = parser.parse_args(
-        ["register", str(tmp_path / "workflows.json"), "spam", "-s"]
-    )
+    args = parser.parse_args(["register", str(tmp_path / "workflows.json"), "spam"])
     with run_app_patch:
         seddy_main.run_app(args)
 
     # Check application input
-    run_app_mock.assert_called_once_with(tmp_path / "workflows.json", "spam", True)
+    run_app_mock.assert_called_once_with(tmp_path / "workflows.json", "spam")

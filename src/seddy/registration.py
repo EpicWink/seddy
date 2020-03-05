@@ -10,7 +10,7 @@ from . import decisions as seddy_decisions
 logger = lg.getLogger(__name__)
 
 
-def list_workflows(domain: str, client) -> t.List[t.Tuple[str, str]]:
+def list_workflows(domain: str, client) -> t.Dict[t.Tuple[str, str], bool]:
     """List all workflows in SWF, including registered and deprecated.
 
     Args:
@@ -18,7 +18,7 @@ def list_workflows(domain: str, client) -> t.List[t.Tuple[str, str]]:
         client (botocore.client.BaseClient): SWF client
 
     Returns:
-        names and versions of workflows in SWF
+        names, versions and registration status of workflows in SWF
     """
 
     logger.info("Listing workflows in '%s'", domain)
@@ -36,9 +36,11 @@ def list_workflows(domain: str, client) -> t.List[t.Tuple[str, str]]:
     )
 
     # Combine
-    workflows = resp_registered["typeInfos"] + resp_deprecated["typeInfos"]
-    existing = [w["workflowType"] for w in workflows]
-    return [(w["name"], w["version"]) for w in existing]
+    registered = [w["workflowType"] for w in resp_registered["typeInfos"]]
+    deprecated = [w["workflowType"] for w in resp_deprecated["typeInfos"]]
+    existing = {(w["name"], w["version"]): True for w in registered}
+    existing.update({(w["name"], w["version"]): False for w in deprecated})
+    return existing
 
 
 def register_workflow(workflow: seddy_decisions.Workflow, domain: str, client):
@@ -77,46 +79,93 @@ def register_workflow(workflow: seddy_decisions.Workflow, domain: str, client):
     )
 
 
-def register_workflows(
-    workflows: t.List[seddy_decisions.Workflow],
+def deprecate_workflow(workflow: seddy_decisions.Workflow, domain: str, client):
+    """Deprecate a workflow in SWF.
+
+    Args:
+        workflow: specification of workflow to deprecate
+        domain: domain to deprecate workflow in
+        client (botocore.client.BaseClient): SWF client
+    """
+
+    _fmt = "Deprecating workflow '%s' (version %s) in domain '%s'"
+    logger.info(_fmt, workflow.name, workflow.version, domain)
+    workflow_type = {"name": workflow.name, "version": workflow.version}
+    client.deprecate_workflow_type(domain=domain, workflowType=workflow_type)
+
+
+def undeprecate_workflow(workflow: seddy_decisions.Workflow, domain: str, client):
+    """Undeprecate a workflow in SWF.
+
+    Args:
+        workflow: specification of workflow to undeprecate
+        domain: domain to undeprecate workflow in
+        client (botocore.client.BaseClient): SWF client
+    """
+
+    _fmt = "Undeprecating workflow '%s' (version %s) in domain '%s'"
+    logger.info(_fmt, workflow.name, workflow.version, domain)
+    workflow_type = {"name": workflow.name, "version": workflow.version}
+    client.undeprecate_workflow_type(domain=domain, workflowType=workflow_type)
+
+
+def _sync_workflow(
+    workflow: seddy_decisions.Workflow,
     domain: str,
-    skip_existing: bool = False,
+    existing: t.Dict[t.Tuple[str, str], bool],
+    client,
 ):
-    """Register workflows with SWF.
+    """Synchronise a workflow's registration with SWF.
+
+    Args:
+        workflow: specification of workflow to register
+        domain: domain to register workflow in
+        existing:
+        client (botocore.client.BaseClient): SWF client
+    """
+
+    is_active = getattr(workflow, "active", True)
+    key = (workflow.name, workflow.version)
+    if key in existing:
+        if existing[key] is is_active:
+            _fmt = "Skipping up-to-date workflow '%s' (version %s, active: %s)"
+            logger.debug(_fmt, workflow.name, workflow.version, is_active)
+        elif is_active:
+            undeprecate_workflow(workflow, domain, client)
+        elif not is_active:
+            deprecate_workflow(workflow, domain, client)
+    elif is_active:  # don't register inactive workflows
+        register_workflow(workflow, domain, client)
+
+
+def register_workflows(workflows: t.List[seddy_decisions.Workflow], domain: str):
+    """Synchronise workflow registration with SWF.
 
     Args:
         workflows: specifications of workflows to register
         domain: domain to register workflows in
-        skip_existing: check for and skip existing workflows
     """
 
     client = seddy_util.get_swf_client()
     logger.log(25, "Registering workflows in '%s'", domain)
 
     # Get existing workflows
-    existing = list_workflows(domain, client) if skip_existing else []
+    existing = list_workflows(domain, client)
     logger.debug("Exising workflows: %s", existing)
 
     # Register workflows
     for workflow in workflows:
-        if (workflow.name, workflow.version) in existing:
-            _fmt = "Skipping existing workflow '%s' (version %s)"
-            logger.debug(_fmt, workflow.name, workflow.version)
-            continue
-        register_workflow(workflow, domain, client)
+        _sync_workflow(workflow, domain, existing, client)
 
 
-def run_app(
-    workflows_spec_file: pathlib.Path, domain: str, skip_existing: bool = False
-):
-    """Run decider application.
+def run_app(workflows_spec_file: pathlib.Path, domain: str):
+    """Run registration synchronisation application.
 
     Arguments:
         workflows_spec_file: workflows specifications file path
         domain: SWF domain
-        skip_existing: check for and skip existing workflows
     """
 
     workflows_spec = seddy_util.load_workflows(workflows_spec_file)
     workflows = seddy_util.construct_workflows(workflows_spec)
-    register_workflows(workflows, domain, skip_existing)
+    register_workflows(workflows, domain)
