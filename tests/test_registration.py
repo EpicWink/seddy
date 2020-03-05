@@ -10,20 +10,13 @@ import boto3
 import pytest
 
 
-@pytest.fixture
-def workflows():
-    """Example workflow type specifications."""
-    workflows = [
-        seddy_decisions.DAGWorkflow("spam", "1.0", []),
-        seddy_decisions.DAGWorkflow("foo", "0.42", [], "The best workflow, bar none.",),
-    ]
-    workflows[1].registration_defaults = {
-        "task_timeout": "NONE",
-        "execution_timeout": 60,
-        "task_list": "eggs",
-        # "task_priority": 2,
-    }
-    return workflows
+class Workflow(seddy_decisions.Workflow):
+    """Test workflow specification."""
+    spec_type = "test"
+    decisions_builder = None
+
+
+seddy_decisions.WORKFLOW["test"] = Workflow
 
 
 @moto.mock_swf
@@ -52,7 +45,7 @@ def test_register_workflow():
     client.register_domain(name="spam", workflowExecutionRetentionPeriodInDays="2")
 
     # Build input
-    workflow = seddy_decisions.DAGWorkflow("foo", "0.42", [], "A workflow.")
+    workflow = Workflow("foo", "0.42", "A workflow.")
     workflow.registration_defaults = {
         "task_timeout": "NONE",
         "execution_timeout": 60,
@@ -84,7 +77,7 @@ def test_deprecate_workflow():
     client.register_workflow_type(domain="spam", name="foo", version="0.42")
 
     # Build input
-    workflow = seddy_decisions.DAGWorkflow("foo", "0.42", [], "A workflow.")
+    workflow = Workflow("foo", "0.42", "A workflow.")
 
     # Run function
     seddy_registration.deprecate_workflow(workflow, "spam", client)
@@ -144,7 +137,7 @@ def test_undeprecate_workflow(patch_moto_swf):
     )
 
     # Build input
-    workflow = seddy_decisions.DAGWorkflow("foo", "0.42", [], "A workflow.")
+    workflow = Workflow("foo", "0.42", "A workflow.")
 
     # Run function
     seddy_registration.undeprecate_workflow(workflow, "spam", client)
@@ -182,12 +175,12 @@ def test_register_workflows(patch_moto_swf):
 
     # Build input
     workflows = [
-        seddy_decisions.DAGWorkflow("foo", "1.0", []),
-        seddy_decisions.DAGWorkflow("foo", "1.1", []),
-        seddy_decisions.DAGWorkflow("foo", "1.2", []),
-        seddy_decisions.DAGWorkflow("bar", "0.42", []),
-        seddy_decisions.DAGWorkflow("bar", "0.43", []),
-        seddy_decisions.DAGWorkflow("bar", "0.44", []),
+        Workflow("foo", "1.0"),
+        Workflow("foo", "1.1"),
+        Workflow("foo", "1.2"),
+        Workflow("bar", "0.42"),
+        Workflow("bar", "0.43"),
+        Workflow("bar", "0.44"),
     ]
     workflows[0].active = False
     workflows[1].active = False
@@ -225,7 +218,7 @@ def test_register_workflows(patch_moto_swf):
     assert workflow_types == exp_deprecated_workflow_types
 
 
-def test_run_app(tmp_path, workflows):
+def test_run_app(tmp_path):
     """Ensure workflow registration app is run correctly."""
     # Setup environment
     register_mock = mock.Mock()
@@ -237,12 +230,11 @@ def test_run_app(tmp_path, workflows):
     workflows_spec = {
         "version": "1.0",
         "workflows": [
-            {"spec_type": "dag", "name": "spam", "version": "1.0", "tasks": [],},
+            {"spec_type": "test", "name": "spam", "version": "1.0"},
             {
-                "spec_type": "dag",
+                "spec_type": "test",
                 "name": "foo",
                 "version": "0.42",
-                "tasks": [],
                 "description": "The best workflow, bar none.",
                 "registration_defaults": {
                     "task_timeout": "NONE",
@@ -256,6 +248,18 @@ def test_run_app(tmp_path, workflows):
     workflows_spec_json = tmp_path / "workflows.json"
     workflows_spec_json.write_text(json.dumps(workflows_spec, indent=4))
 
+    # Build expectation
+    workflows = [
+        Workflow("spam", "1.0"),
+        Workflow("foo", "0.42", "The best workflow, bar none."),
+    ]
+    workflows[1].registration_defaults = {
+        "task_timeout": "NONE",
+        "execution_timeout": 60,
+        "task_list": "eggs",
+        # "task_priority": 2,
+    }
+
     # Run function
     with register_patch:
         seddy_registration.run_app(workflows_spec_json, "spam")
@@ -264,7 +268,7 @@ def test_run_app(tmp_path, workflows):
     register_mock.assert_called_once_with(mock.ANY, "spam")
 
     res_workflows = register_mock.call_args_list[0][0][0]
-    assert len(workflows) == len(workflows)
+    assert len(res_workflows) == len(workflows)
     for res_workflow, workflow in zip(res_workflows, workflows):
         assert isinstance(res_workflow, type(workflow))
         assert res_workflow.name == workflow.name
