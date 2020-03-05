@@ -14,7 +14,7 @@ Features:
 * Specify a directed graph (aka DAG) of activity (via dependencies) tasks in the
   workflow
 * Supports coloured logging
-* Extensible decision-building: just subclass `seddy.decisions.DecisionsBuilder`
+* Extensible decision-building: just subclass `seddy.DecisionsBuilder`
 * Register workflows
 
 ## Installation
