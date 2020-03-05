@@ -10,9 +10,7 @@ from . import Workflow
 logger = lg.getLogger(__package__)
 
 
-def _construct_workflows(
-    workflows_spec: t.Dict[str, t.Any]
-) -> t.List[Workflow]:
+def _construct_workflows(workflows_spec: t.Dict[str, t.Any]) -> t.List[Workflow]:
     """Construct workflows from specification.
 
     Args:
