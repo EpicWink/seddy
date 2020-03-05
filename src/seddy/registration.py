@@ -59,19 +59,21 @@ def register_workflow(workflow: seddy_decisions.Workflow, domain: str, client):
     kwargs = {}
     if workflow.description is not None:
         kwargs["description"] = workflow.description
-    if hasattr(workflow, "registration_defaults"):
-        if "task_timeout" in workflow.registration_defaults:
-            _default = workflow.registration_defaults["task_timeout"]
+    if workflow.registration:
+        if workflow.registration.task_timeout is not None:
+            _default = workflow.registration.task_timeout
             kwargs["defaultTaskStartToCloseTimeout"] = str(_default)
-        if "execution_timeout" in workflow.registration_defaults:
-            _default = workflow.registration_defaults["execution_timeout"]
+        if workflow.registration.execution_timeout is not None:
+            _default = workflow.registration.execution_timeout
             kwargs["defaultExecutionStartToCloseTimeout"] = str(_default)
-        if "task_list" in workflow.registration_defaults:
-            _default = workflow.registration_defaults["task_list"]
-            kwargs["defaultTaskList"] = {"name": _default}
-        # if "task_priority" in workflow.registration_defaults:
-        #     _default = workflow.registration_defaults["task_priority"]
-        #     kwargs["defaultTaskPriority"] = str(_default)
+        if workflow.registration.task_list is not None:
+            kwargs["defaultTaskList"] = {"name": workflow.registration.task_list}
+        if workflow.registration.task_priority is not None:
+            kwargs["defaultTaskPriority"] = str(workflow.registration.task_priority)
+        if workflow.registration.child_policy is not None:
+            kwargs["defaultChildPolicy"] = workflow.registration.child_policy.value
+        if workflow.registration.lambda_role is not None:
+            kwargs["defaultLambdaRole"] = workflow.registration.lambda_role
 
     # Register
     client.register_workflow_type(
@@ -124,7 +126,7 @@ def _sync_workflow(
         client (botocore.client.BaseClient): SWF client
     """
 
-    is_active = getattr(workflow, "active", True)
+    is_active = workflow.registration.active if workflow.registration else True
     key = (workflow.name, workflow.version)
     if key in existing:
         if existing[key] is is_active:

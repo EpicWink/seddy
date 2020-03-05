@@ -1,7 +1,78 @@
 """SWF decisions making."""
 
 import abc
+import enum
 import typing as t
+
+
+class ChildPolicy(enum.Enum):
+    """Policy for child executions on parent termination.
+
+    See: https://docs.aws.amazon.com/amazonswf/latest/apireference/API_StartWorkflowExecution.html#SWF-StartWorkflowExecution-request-childPolicy
+    """
+
+    TERMINATE = "TERMINATE"
+    REQUEST_CANCEL = "REQUEST_CANCEL"
+    ABANDON = "ABANDON"
+
+
+class Registration:
+    """Workflow registration configuration.
+
+    Args:
+        active: registration status, ``False`` for deprecated
+        task_timeout: default decision task time-out (seconds), or "NONE"
+            for unlimited
+        execution_timeout: default workflow execution time-out (seconds)
+        task_list: default decision task-list
+        task_priority: default decision task priority
+        child_policy: default policy for child executions upon parent
+            execution termination
+        lambda_role: default IAM role for Lambda access
+    """
+
+    def __init__(
+        self,
+        active: bool = True,
+        task_timeout: t.Union[int, str] = None,
+        execution_timeout: int = None,
+        task_list: str = None,
+        task_priority: int = None,
+        child_policy: ChildPolicy = None,
+        lambda_role: str = None,
+    ):
+        self.active = active
+        self.task_timeout = task_timeout
+        self.execution_timeout = execution_timeout
+        self.task_list = task_list
+        self.task_priority = task_priority
+        self.child_policy = child_policy
+        self.lambda_role = lambda_role
+
+    @classmethod
+    def from_spec(cls, spec: t.Dict[str, t.Any]):
+        """Construct registration configuration from specification.
+
+        Args:
+            spec: workflow registration configuration specification
+        """
+
+        kw = {}
+        if "active" in spec:
+            kw["active"] = spec["active"]
+        if "task_timeout" in spec:
+            kw["task_timeout"] = spec["task_timeout"]
+        if "execution_timeout" in spec:
+            kw["execution_timeout"] = spec["execution_timeout"]
+        if "task_list" in spec:
+            kw["task_list"] = spec["task_list"]
+        if "task_priority" in spec:
+            kw["task_priority"] = spec["task_priority"]
+        if "child_policy" in spec:
+            kw["child_policy"] = ChildPolicy(spec["child_policy"])
+        if "lambda_role" in spec:
+            kw["lambda_role"] = spec["lambda_role"]
+        return cls(**kw)
 
 
 class DecisionsBuilder(metaclass=abc.ABCMeta):
@@ -29,12 +100,22 @@ class Workflow(metaclass=abc.ABCMeta):
     Args:
         name: workflow name
         version: workflow version
+        registration: workflow registration configuration
     """
 
-    def __init__(self, name: str, version: str, description: str = None):
+    _registration_cls = Registration
+
+    def __init__(
+        self,
+        name: str,
+        version: str,
+        description: str = None,
+        registration: Registration = None,
+    ):
         self.name = name
         self.version = version
         self.description = description
+        self.registration = registration
 
     @classmethod
     def _args_from_spec(
@@ -53,6 +134,10 @@ class Workflow(metaclass=abc.ABCMeta):
         kwargs = {}
         if "description" in spec:
             kwargs["description"] = spec["description"]
+        if "registration" in spec:
+            kwargs["registration"] = cls._registration_cls.from_spec(
+                spec["registration"]
+            )
         return args, kwargs
 
     @classmethod

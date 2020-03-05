@@ -12,6 +12,7 @@ import pytest
 
 class Workflow(seddy_decisions.Workflow):
     """Test workflow specification."""
+
     spec_type = "test"
     decisions_builder = None
 
@@ -37,21 +38,86 @@ def test_list_workflows():
     assert res == {("foo", "1.0"): False, ("foo", "1.1"): True, ("bar", "0.42"): True}
 
 
+@pytest.fixture
+def patch_moto_swf_register():
+    """Temporarily patch ``moto`` to fix workflow undeprecation."""
+    from moto.swf import models as swf_models
+    from moto.swf import responses as swf_responses
+    from moto.swf import urls as swf_urls
+
+    class WorkflowType(swf_models.WorkflowType):
+        @property
+        def _configuration_keys(self):
+            new_keys = ["defaultTaskPriority", "defaultLambdaRole"]
+            return super()._configuration_keys + new_keys
+
+    class SWFResponse(swf_responses.SWFResponse):
+        def register_workflow_type(self):
+            domain = self._params["domain"]
+            name = self._params["name"]
+            version = self._params["version"]
+            task_list_d = self._params.get("defaultTaskList")
+            task_list = task_list_d.get("name") if task_list_d else None
+            child_policy = self._params.get("defaultChildPolicy")
+            task_timeout = self._params.get("defaultTaskStartToCloseTimeout")
+            execution_timeout = self._params.get("defaultExecutionStartToCloseTimeout")
+            task_priority = self._params.get("defaultTaskPriority")
+            lambda_role = self._params.get("defaultLambdaRole")
+            description = self._params.get("description")
+
+            self._check_string(domain)
+            self._check_string(name)
+            self._check_string(version)
+            self._check_none_or_string(task_list)
+            self._check_none_or_string(child_policy)
+            self._check_none_or_string(task_timeout)
+            self._check_none_or_string(execution_timeout)
+            self._check_none_or_string(task_priority)
+            self._check_none_or_string(lambda_role)
+            self._check_none_or_string(description)
+
+            self.swf_backend.register_type(
+                "workflow",
+                domain,
+                name,
+                version,
+                task_list=task_list,
+                default_child_policy=child_policy,
+                default_task_start_to_close_timeout=task_timeout,
+                default_execution_start_to_close_timeout=execution_timeout,
+                default_task_priority=task_priority,
+                default_lambda_role=lambda_role,
+                description=description,
+            )
+            return ""
+
+    swf_types_patch = mock.patch.dict(
+        swf_models.KNOWN_SWF_TYPES, {"workflow": WorkflowType}
+    )
+    url_paths_patch = mock.patch.dict(
+        swf_urls.url_paths, {"{0}/$": SWFResponse.dispatch}
+    )
+    with swf_types_patch, url_paths_patch:
+        yield
+
+
 @moto.mock_swf
-def test_register_workflow():
+def test_register_workflow(patch_moto_swf_register):
     """Test workflow registration."""
     # Setup environment
     client = boto3.client("swf", region_name="us-east-1")
     client.register_domain(name="spam", workflowExecutionRetentionPeriodInDays="2")
 
     # Build input
-    workflow = Workflow("foo", "0.42", "A workflow.")
-    workflow.registration_defaults = {
-        "task_timeout": "NONE",
-        "execution_timeout": 60,
-        "task_list": "eggs",
-        # "task_priority": 2,
-    }
+    registration = seddy_decisions.Registration(
+        task_timeout="NONE",
+        execution_timeout=60,
+        task_list="eggs",
+        task_priority=2,
+        child_policy=seddy_decisions.ChildPolicy.TERMINATE,
+        lambda_role="arn:aws:iam::spam:role/eggs",
+    )
+    workflow = Workflow("foo", "0.42", "A workflow.", registration)
 
     # Run function
     seddy_registration.register_workflow(workflow, "spam", client)
@@ -62,10 +128,13 @@ def test_register_workflow():
     )
     assert workflow_info["typeInfo"]["status"] == "REGISTERED"
     assert workflow_info["typeInfo"]["description"] == "A workflow."
-    assert workflow_info["configuration"]["defaultTaskStartToCloseTimeout"] == "NONE"
-    assert workflow_info["configuration"]["defaultExecutionStartToCloseTimeout"] == "60"
-    assert workflow_info["configuration"]["defaultTaskList"] == {"name": "eggs"}
-    # assert workflow_info["configuration"]["defaultTaskPriority"] == "2"
+    cfg = workflow_info["configuration"]
+    assert cfg["defaultTaskStartToCloseTimeout"] == "NONE"
+    assert cfg["defaultExecutionStartToCloseTimeout"] == "60"
+    assert cfg["defaultTaskList"] == {"name": "eggs"}
+    assert cfg["defaultTaskPriority"] == "2"
+    assert cfg["defaultChildPolicy"] == "TERMINATE"
+    assert cfg["defaultLambdaRole"] == "arn:aws:iam::spam:role/eggs"
 
 
 @moto.mock_swf
@@ -90,7 +159,7 @@ def test_deprecate_workflow():
 
 
 @pytest.fixture
-def patch_moto_swf():
+def patch_moto_swf_undeprecate():
     """Temporarily patch ``moto`` to fix workflow undeprecation."""
     from moto.swf import models as swf_models
     from moto.swf import responses as swf_responses
@@ -126,7 +195,7 @@ def patch_moto_swf():
 
 
 @moto.mock_swf
-def test_undeprecate_workflow(patch_moto_swf):
+def test_undeprecate_workflow(patch_moto_swf_undeprecate):
     """Test workflow undeprecation."""
     # Setup environment
     client = boto3.client("swf", region_name="us-east-1")
@@ -150,7 +219,7 @@ def test_undeprecate_workflow(patch_moto_swf):
 
 
 @moto.mock_swf
-def test_register_workflows(patch_moto_swf):
+def test_register_workflows(patch_moto_swf_undeprecate):
     """Test workflows registration syncing."""
     # Setup environment
     client = boto3.client("swf", region_name="us-east-1")
@@ -175,19 +244,13 @@ def test_register_workflows(patch_moto_swf):
 
     # Build input
     workflows = [
-        Workflow("foo", "1.0"),
-        Workflow("foo", "1.1"),
-        Workflow("foo", "1.2"),
-        Workflow("bar", "0.42"),
-        Workflow("bar", "0.43"),
-        Workflow("bar", "0.44"),
+        Workflow("foo", "1.0", registration=seddy_decisions.Registration(active=False)),
+        Workflow("foo", "1.1", registration=seddy_decisions.Registration(active=False)),
+        Workflow("foo", "1.2", registration=seddy_decisions.Registration(active=True)),
+        Workflow("bar", "0.42", registration=seddy_decisions.Registration(active=True)),
+        Workflow("bar", "0.43", registration=seddy_decisions.Registration(active=True)),
+        Workflow("bar", "0.44", "", seddy_decisions.Registration(active=False)),
     ]
-    workflows[0].active = False
-    workflows[1].active = False
-    workflows[2].active = True
-    workflows[3].active = True
-    workflows[4].active = True
-    workflows[5].active = False
 
     # Build expectation
     exp_registered_workflow_types = [
@@ -236,11 +299,13 @@ def test_run_app(tmp_path):
                 "name": "foo",
                 "version": "0.42",
                 "description": "The best workflow, bar none.",
-                "registration_defaults": {
+                "registration": {
                     "task_timeout": "NONE",
                     "execution_timeout": 60,
                     "task_list": "eggs",
-                    # "task_priority": 2,
+                    "task_priority": 2,
+                    "child_policy": "TERMINATE",
+                    "lambda_role": "arn:aws:iam::spam:role/eggs",
                 },
             },
         ],
@@ -249,16 +314,18 @@ def test_run_app(tmp_path):
     workflows_spec_json.write_text(json.dumps(workflows_spec, indent=4))
 
     # Build expectation
+    registration1 = seddy_decisions.Registration(
+        task_timeout="NONE",
+        execution_timeout=60,
+        task_list="eggs",
+        task_priority=2,
+        child_policy=seddy_decisions.ChildPolicy.TERMINATE,
+        lambda_role="arn:aws:iam::spam:role/eggs",
+    )
     workflows = [
         Workflow("spam", "1.0"),
-        Workflow("foo", "0.42", "The best workflow, bar none."),
+        Workflow("foo", "0.42", "The best workflow, bar none.", registration1),
     ]
-    workflows[1].registration_defaults = {
-        "task_timeout": "NONE",
-        "execution_timeout": 60,
-        "task_list": "eggs",
-        # "task_priority": 2,
-    }
 
     # Run function
     with register_patch:
@@ -274,5 +341,13 @@ def test_run_app(tmp_path):
         assert res_workflow.name == workflow.name
         assert res_workflow.version == workflow.version
         assert res_workflow.description == workflow.description
-        res_defaults = getattr(res_workflow, "registration_defaults", None)
-        assert res_defaults == getattr(workflow, "registration_defaults", None)
+        if workflow.registration:
+            registration = workflow.registration
+            res_registration = res_workflow.registration
+            assert res_registration.active == registration.active
+            assert res_registration.task_timeout == registration.task_timeout
+            assert res_registration.execution_timeout == registration.execution_timeout
+            assert res_registration.task_list == registration.task_list
+            assert res_registration.task_priority == registration.task_priority
+            assert res_registration.child_policy == registration.child_policy
+            assert res_registration.lambda_role == registration.lambda_role

@@ -59,6 +59,15 @@ class TestWorkflow:
             "version": "0.42",
             "description": "Sunny-side up workflow.",
             "spec_type": "eggs",
+            "registration": {
+                "active": False,
+                "task_timeout": "NONE",
+                "execution_timeout": 60,
+                "task_list": "spam",
+                "task_priority": 2,
+                "child_policy": "TERMINATE",
+                "lambda_role": "arn:aws:iam::spam:role/eggs",
+            },
         }
 
     @pytest.fixture
@@ -81,6 +90,13 @@ class TestWorkflow:
         assert res.name == "foo"
         assert res.version == "0.42"
         assert res.description == "Sunny-side up workflow."
+        assert res.registration.active is False
+        assert res.registration.task_timeout == "NONE"
+        assert res.registration.execution_timeout == 60
+        assert res.registration.task_list == "spam"
+        assert res.registration.task_priority == 2
+        assert res.registration.child_policy == seddy_decisions.ChildPolicy.TERMINATE
+        assert res.registration.lambda_role == "arn:aws:iam::spam:role/eggs"
 
     def test_setup(self, instance):
         """Test workflow specification pre-computation."""
