@@ -138,8 +138,7 @@ def run_app(
         identity: decider identity, default: automatically generated
     """
 
-    decider_spec = _specs.load_workflows(workflows_spec_file)
-    workflows = _specs.construct_workflows(decider_spec)
+    workflows = _specs.load_workflows(workflows_spec_file)
     _specs.setup_workflows(workflows)
     decider = Decider(workflows, domain, task_list, identity)
     decider.run()

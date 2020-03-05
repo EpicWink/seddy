@@ -168,6 +168,5 @@ def run_app(workflows_spec_file: pathlib.Path, domain: str):
         domain: SWF domain
     """
 
-    workflows_spec = _specs.load_workflows(workflows_spec_file)
-    workflows = _specs.construct_workflows(workflows_spec)
+    workflows = _specs.load_workflows(workflows_spec_file)
     register_workflows(workflows, domain)

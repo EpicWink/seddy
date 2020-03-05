@@ -10,7 +10,7 @@ from . import Workflow
 logger = lg.getLogger(__package__)
 
 
-def construct_workflows(
+def _construct_workflows(
     workflows_spec: t.Dict[str, t.Any]
 ) -> t.List[Workflow]:
     """Construct workflows from specification.
@@ -47,7 +47,7 @@ def setup_workflows(workflows: t.List[Workflow]):
         workflow.setup()
 
 
-def load_workflows(workflows_file: pathlib.Path) -> t.Dict[str, t.Any]:
+def _load_specs(workflows_file: pathlib.Path) -> t.Dict[str, t.Any]:
     """Load workflows specifications file.
 
     Determines load method from the file suffix. Supported file types:
@@ -76,3 +76,22 @@ def load_workflows(workflows_file: pathlib.Path) -> t.Dict[str, t.Any]:
                 raise e from er
         return yaml.safe_load(workflows_text)
     raise ValueError("Unknown extension: %s" % workflows_file.suffix)
+
+
+def load_workflows(workflows_file: pathlib.Path) -> t.List[Workflow]:
+    """Load workflows specifications file.
+
+    Determines load method from the file suffix. Supported file types:
+
+    * JSON
+    * YAML
+
+    Args:
+        workflows_file: workflows specifications file path
+
+    Returns:
+        workflows specifications
+    """
+
+    workflows_specs = _load_specs(workflows_file)
+    return _construct_workflows(workflows_specs)
