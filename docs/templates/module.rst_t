@@ -4,4 +4,5 @@
 {%- for option in automodule_options %}
    :{{ option }}:
 {%- endfor %}
+   :autosummary:
 

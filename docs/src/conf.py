@@ -17,6 +17,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
+    "autodocsumm",
 ]
 html_theme = "sphinx_rtd_theme"
 master_doc = "index"  # support read-the-docs
