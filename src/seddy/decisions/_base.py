@@ -37,6 +37,25 @@ class Workflow(metaclass=abc.ABCMeta):
         self.description = description
 
     @classmethod
+    def _args_from_spec(
+        cls, spec: t.Dict[str, t.Any]
+    ) -> t.Tuple[tuple, t.Dict[str, t.Any]]:
+        """Construct initialisation arguments from workflow specification.
+
+        Args:
+            spec: workflow specification
+
+        Returns:
+            initialisation positional and keyword arguments
+        """
+
+        args = (spec["name"], spec["version"])
+        kwargs = {}
+        if "description" in spec:
+            kwargs["description"] = spec["description"]
+        return args, kwargs
+
+    @classmethod
     def from_spec(cls, spec: t.Dict[str, t.Any]):
         """Construct workflow type from specification.
 
@@ -44,7 +63,8 @@ class Workflow(metaclass=abc.ABCMeta):
             spec: workflow specification
         """
 
-        return cls(spec["name"], spec["version"], spec.get("description"))
+        args, kwargs = cls._args_from_spec(spec)
+        return cls(*args, **kwargs)
 
     @property
     @abc.abstractmethod

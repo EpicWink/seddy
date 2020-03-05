@@ -222,10 +222,10 @@ class DAGWorkflow(_base.Workflow):
         self.dependants = {}
 
     @classmethod
-    def from_spec(cls, spec):
-        return cls(
-            spec["name"], spec["version"], spec["tasks"], spec.get("description")
-        )
+    def _args_from_spec(cls, spec):
+        args, kwargs = super()._args_from_spec(spec)
+        args += (spec["tasks"],)
+        return args, kwargs
 
     def _build_dependants(self):
         for activity_task in self.task_specs:
