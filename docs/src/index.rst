@@ -21,6 +21,7 @@ Documentation
    API Reference <seddy>
    cli
    io
+   specs
    tutorial
 
 * :ref:`genindex`
