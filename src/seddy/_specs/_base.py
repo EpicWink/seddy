@@ -8,7 +8,8 @@ import typing as t
 class ChildPolicy(enum.Enum):
     """Policy for child executions on parent termination.
 
-    See: https://docs.aws.amazon.com/amazonswf/latest/apireference/API_StartWorkflowExecution.html#SWF-StartWorkflowExecution-request-childPolicy
+    .. seealso::
+        `SWF documentation <https://docs.aws.amazon.com/amazonswf/latest/apireference/API_StartWorkflowExecution.html#SWF-StartWorkflowExecution-request-childPolicy>`_
     """
 
     TERMINATE = "TERMINATE"
