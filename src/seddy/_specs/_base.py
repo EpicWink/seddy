@@ -9,7 +9,8 @@ class ChildPolicy(enum.Enum):
     """Policy for child executions on parent termination.
 
     .. seealso::
-        `SWF documentation <https://docs.aws.amazon.com/amazonswf/latest/apireference/API_StartWorkflowExecution.html#SWF-StartWorkflowExecution-request-childPolicy>`_
+        `StartWorkflowExecution in SWF API documentation
+        <https://docs.aws.amazon.com/amazonswf/latest/apireference/API_StartWorkflowExecution.html#SWF-StartWorkflowExecution-request-childPolicy>`_
     """
 
     TERMINATE = "TERMINATE"
