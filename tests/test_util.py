@@ -5,6 +5,7 @@ import json
 from unittest import mock
 
 from seddy import _util as seddy_util
+from seddy import _specs as seddy_specs
 import pytest
 import yaml
 
@@ -60,7 +61,7 @@ def test_load_workflows_json(tmp_path, workflows_spec):
     workflows_file.write_text(json.dumps(workflows_spec))
 
     # Run function
-    assert seddy_util.load_workflows(workflows_file) == workflows_spec
+    assert seddy_specs.load_workflows(workflows_file) == workflows_spec
 
 
 def test_load_workflows_yaml(tmp_path, workflows_spec):
@@ -70,7 +71,7 @@ def test_load_workflows_yaml(tmp_path, workflows_spec):
     workflows_file.write_text(yaml.safe_dump(workflows_spec))
 
     # Run function
-    assert seddy_util.load_workflows(workflows_file) == workflows_spec
+    assert seddy_specs.load_workflows(workflows_file) == workflows_spec
 
 
 def test_load_workflows_yaml_raises(tmp_path, workflows_spec):
@@ -84,7 +85,7 @@ def test_load_workflows_yaml_raises(tmp_path, workflows_spec):
 
     # Run function
     with pytest.raises(ModuleNotFoundError), yaml_patch:
-        seddy_util.load_workflows(workflows_file)
+        seddy_specs.load_workflows(workflows_file)
 
 
 def test_load_workflows_with_incorrect_suffix(tmp_path, workflows_spec):
@@ -95,4 +96,4 @@ def test_load_workflows_with_incorrect_suffix(tmp_path, workflows_spec):
 
     # Run function
     with pytest.raises(ValueError):
-        seddy_util.load_workflows(workflows_file)
+        seddy_specs.load_workflows(workflows_file)

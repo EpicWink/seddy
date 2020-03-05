@@ -1,8 +1,8 @@
-"""Test ``seddy.decisions``."""
+"""Test ``seddy._specs``."""
 
 from unittest import mock
 
-from seddy import decisions as seddy_decisions
+from seddy import _specs as seddy_decisions
 import pytest
 
 
@@ -12,7 +12,7 @@ def test_workflow_map():
 
 
 class TestDecisionsBuilder:
-    """Test ``seddy.decisions.DecisionsBuilder``."""
+    """Test ``seddy._specs.DecisionsBuilder``."""
 
     class DecisionsBuilder(seddy_decisions.DecisionsBuilder):
         def build_decisions(self):
@@ -41,7 +41,7 @@ class TestDecisionsBuilder:
 
 
 class TestWorkflow:
-    """Test ``seddy.decisions.Workflow``."""
+    """Test ``seddy._specs.Workflow``."""
 
     class Workflow(seddy_decisions.Workflow):
         class DecisionsBuilder(seddy_decisions.DecisionsBuilder):

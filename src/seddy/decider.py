@@ -7,7 +7,7 @@ import typing as t
 import logging as lg
 
 from . import _util
-from . import decisions as seddy_decisions
+from . import _specs
 
 logger = lg.getLogger(__name__)
 socket.setdefaulttimeout(70.0)
@@ -30,7 +30,7 @@ class Decider:
 
     def __init__(
         self,
-        workflows: t.List[seddy_decisions.Workflow],
+        workflows: t.List[_specs.Workflow],
         domain: str,
         task_list: str,
         identity: str = None,
@@ -138,8 +138,8 @@ def run_app(
         identity: decider identity, default: automatically generated
     """
 
-    decider_spec = _util.load_workflows(workflows_spec_file)
-    workflows = _util.construct_workflows(decider_spec)
-    _util.setup_workflows(workflows)
+    decider_spec = _specs.load_workflows(workflows_spec_file)
+    workflows = _specs.construct_workflows(decider_spec)
+    _specs.setup_workflows(workflows)
     decider = Decider(workflows, domain, task_list, identity)
     decider.run()

@@ -4,7 +4,7 @@ import json
 from unittest import mock
 
 from seddy import registration as seddy_registration
-from seddy import decisions as seddy_decisions
+from seddy import _specs as seddy_decisions
 import moto
 import boto3
 import pytest

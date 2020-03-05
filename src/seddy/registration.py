@@ -4,8 +4,8 @@ import pathlib
 import typing as t
 import logging as lg
 
-from . import _util as seddy_util
-from . import decisions as seddy_decisions
+from . import _util
+from . import _specs
 
 logger = lg.getLogger(__name__)
 
@@ -25,13 +25,13 @@ def list_workflows(domain: str, client) -> t.Dict[t.Tuple[str, str], bool]:
 
     # List registered workflows
     _kwargs = {"domain": domain, "registrationStatus": "REGISTERED"}
-    resp_registered = seddy_util.list_paginated(
+    resp_registered = _util.list_paginated(
         client.list_workflow_types, "typeInfos", _kwargs
     )
 
     # List deprecated workflows
     _kwargs = {"domain": domain, "registrationStatus": "DEPRECATED"}
-    resp_deprecated = seddy_util.list_paginated(
+    resp_deprecated = _util.list_paginated(
         client.list_workflow_types, "typeInfos", _kwargs
     )
 
@@ -43,7 +43,7 @@ def list_workflows(domain: str, client) -> t.Dict[t.Tuple[str, str], bool]:
     return existing
 
 
-def register_workflow(workflow: seddy_decisions.Workflow, domain: str, client):
+def register_workflow(workflow: _specs.Workflow, domain: str, client):
     """Register a workflow with SWF.
 
     Args:
@@ -81,7 +81,7 @@ def register_workflow(workflow: seddy_decisions.Workflow, domain: str, client):
     )
 
 
-def deprecate_workflow(workflow: seddy_decisions.Workflow, domain: str, client):
+def deprecate_workflow(workflow: _specs.Workflow, domain: str, client):
     """Deprecate a workflow in SWF.
 
     Args:
@@ -96,7 +96,7 @@ def deprecate_workflow(workflow: seddy_decisions.Workflow, domain: str, client):
     client.deprecate_workflow_type(domain=domain, workflowType=workflow_type)
 
 
-def undeprecate_workflow(workflow: seddy_decisions.Workflow, domain: str, client):
+def undeprecate_workflow(workflow: _specs.Workflow, domain: str, client):
     """Undeprecate a workflow in SWF.
 
     Args:
@@ -112,7 +112,7 @@ def undeprecate_workflow(workflow: seddy_decisions.Workflow, domain: str, client
 
 
 def _sync_workflow(
-    workflow: seddy_decisions.Workflow,
+    workflow: _specs.Workflow,
     domain: str,
     existing: t.Dict[t.Tuple[str, str], bool],
     client,
@@ -140,7 +140,7 @@ def _sync_workflow(
         register_workflow(workflow, domain, client)
 
 
-def register_workflows(workflows: t.List[seddy_decisions.Workflow], domain: str):
+def register_workflows(workflows: t.List[_specs.Workflow], domain: str):
     """Synchronise workflow registration with SWF.
 
     Args:
@@ -148,7 +148,7 @@ def register_workflows(workflows: t.List[seddy_decisions.Workflow], domain: str)
         domain: domain to register workflows in
     """
 
-    client = seddy_util.get_swf_client()
+    client = _util.get_swf_client()
     logger.log(25, "Registering workflows in '%s'", domain)
 
     # Get existing workflows
@@ -168,6 +168,6 @@ def run_app(workflows_spec_file: pathlib.Path, domain: str):
         domain: SWF domain
     """
 
-    workflows_spec = seddy_util.load_workflows(workflows_spec_file)
-    workflows = seddy_util.construct_workflows(workflows_spec)
+    workflows_spec = _specs.load_workflows(workflows_spec_file)
+    workflows = _specs.construct_workflows(workflows_spec)
     register_workflows(workflows, domain)

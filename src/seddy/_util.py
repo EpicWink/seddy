@@ -2,14 +2,10 @@
 
 import os
 import sys
-import json
-import pathlib
 import typing as t
 import logging as lg
 
 import boto3
-
-from . import decisions as seddy_decisions
 
 logger = lg.getLogger(__package__)
 AWS_SWF_ENDPOINT_URL = os.environ.get("AWS_SWF_ENDPOINT_URL")
@@ -106,41 +102,6 @@ def list_paginated(
     return resp
 
 
-def construct_workflows(
-    workflows_spec: t.Dict[str, t.Any]
-) -> t.List[seddy_decisions.Workflow]:
-    """Construct workflows from specification.
-
-    Args:
-        workflows_spec: workflows specifications
-
-    Returns:
-        workflow type specifications
-    """
-
-    assert (1,) < tuple(map(int, workflows_spec["version"].split("."))) < (2,)
-    workflows = []
-    for workflow_spec in workflows_spec["workflows"]:
-        workflow_cls = seddy_decisions.WORKFLOW[workflow_spec["spec_type"]]
-        workflow = workflow_cls.from_spec(workflow_spec)
-        workflows.append(workflow)
-    return workflows
-
-
-def setup_workflows(workflows: t.List[seddy_decisions.Workflow]):
-    """Set-up decider workflows.
-
-    Args:
-        workflows: workflow type specifications
-
-    Returns:
-        decider initialised workflows
-    """
-
-    for workflow in workflows:
-        workflow.setup()
-
-
 def get_swf_client():
     """Create an SWF client.
 
@@ -154,34 +115,3 @@ def get_swf_client():
         "Creating SWF client with endpoint URL: %s", AWS_SWF_ENDPOINT_URL or "<default>"
     )
     return boto3.client("swf", endpoint_url=AWS_SWF_ENDPOINT_URL)
-
-
-def load_workflows(workflows_file: pathlib.Path) -> t.Dict[str, t.Any]:
-    """Load workflows specifications file.
-
-    Determines load method from the file suffix. Supported file types:
-
-    * JSON
-    * YAML
-
-    Args:
-        workflows_file: workflows specifications file path
-
-    Returns:
-        workflows specifications
-    """
-
-    logger.info("Loading workflows specifictions from '%s'", workflows_file)
-    workflows_text = workflows_file.read_text()
-    if workflows_file.suffix == ".json":
-        return json.loads(workflows_text)
-    elif workflows_file.suffix in (".yml", ".yaml"):
-        try:
-            import yaml
-        except ImportError as e:
-            try:
-                from ruamel import yaml
-            except ImportError as er:
-                raise e from er
-        return yaml.safe_load(workflows_text)
-    raise ValueError("Unknown extension: %s" % workflows_file.suffix)

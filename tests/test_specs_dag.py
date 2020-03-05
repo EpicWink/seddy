@@ -1,16 +1,16 @@
-"""Test ``seddy.decisions._dag``."""
+"""Test ``seddy._specs._dag``."""
 
-from seddy import decisions as seddy_decisions
+from seddy import _specs as seddy_specs
 import pytest
 
 
 class TestDAGBuilder:
-    """Test ``seddy.decisions.DAGBuilder``."""
+    """Test ``seddy._specs.DAGBuilder``."""
 
     @pytest.fixture
     def workflow(self):
         """Example DAG workflow specification."""
-        workflow = seddy_decisions.DAGWorkflow.from_spec(
+        workflow = seddy_specs.DAGWorkflow.from_spec(
             {
                 "name": "foo",
                 "version": "0.42",
@@ -616,7 +616,7 @@ class TestDAGBuilder:
     @pytest.fixture
     def instance(self, workflow, task):
         """DAG decisions builder instance."""
-        return seddy_decisions.DAGBuilder(workflow, task)
+        return seddy_specs.DAGBuilder(workflow, task)
 
     def test_build_decisions(self, instance, expected_decisions):
         """Test DAG decisions building."""
@@ -625,7 +625,7 @@ class TestDAGBuilder:
 
 
 class TestWorkflow:
-    """Test ``seddy.decisions.DAGWorkflow``."""
+    """Test ``seddy._specs.DAGWorkflow``."""
 
     @pytest.fixture
     def task_specs(self):
@@ -669,7 +669,7 @@ class TestWorkflow:
     @pytest.fixture
     def instance(self, task_specs):
         """DAG-type workflow specification instance."""
-        return seddy_decisions.DAGWorkflow("foo", "0.42", task_specs, "A DAGflow")
+        return seddy_specs.DAGWorkflow("foo", "0.42", task_specs, "A DAGflow")
 
     def test_init(self, instance, task_specs):
         """Test DAG-type workflow specification initialisation."""
@@ -678,13 +678,13 @@ class TestWorkflow:
         assert instance.description == "A DAGflow"
         assert instance.task_specs is task_specs
         assert instance.spec_type == "dag"
-        assert instance.decisions_builder is seddy_decisions.DAGBuilder
+        assert instance.decisions_builder is seddy_specs.DAGBuilder
         assert not instance.dependants
 
     def test_from_spec(self, spec, task_specs):
         """Test construction from specification."""
-        res = seddy_decisions.DAGWorkflow.from_spec(spec)
-        assert isinstance(res, seddy_decisions.DAGWorkflow)
+        res = seddy_specs.DAGWorkflow.from_spec(spec)
+        assert isinstance(res, seddy_specs.DAGWorkflow)
         assert res.name == "foo"
         assert res.version == "0.42"
         assert res.description == "A DAGflow"

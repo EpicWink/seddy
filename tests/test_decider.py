@@ -6,7 +6,7 @@ import socket
 from unittest import mock
 
 from seddy import decider as seddy_decider
-from seddy import decisions as seddy_decisions
+from seddy import _specs as seddy_specs
 import moto
 import pytest
 from botocore import client as botocore_client
@@ -20,9 +20,9 @@ class TestDecider:
     @pytest.fixture
     def workflow_mocks(self):
         workflows = [
-            mock.Mock(spec=seddy_decisions.Workflow),
-            mock.Mock(spec=seddy_decisions.Workflow),
-            mock.Mock(spec=seddy_decisions.Workflow),
+            mock.Mock(spec=seddy_specs.Workflow),
+            mock.Mock(spec=seddy_specs.Workflow),
+            mock.Mock(spec=seddy_specs.Workflow),
         ]
         workflows[0].name = "spam"
         workflows[0].version = "1.0"
@@ -346,7 +346,7 @@ def test_run_app(tmp_path):
 
     workflows = decider_class_mock.call_args_list[0][0][0]
     assert len(workflows) == 1
-    assert isinstance(workflows[0], seddy_decisions.DAGWorkflow)
+    assert isinstance(workflows[0], seddy_specs.DAGWorkflow)
     assert workflows[0].name == workflows_spec["workflows"][0]["name"]
     assert workflows[0].version == workflows_spec["workflows"][0]["version"]
     assert workflows[0].dependants == {"foo": ["bar", "yay"], "bar": [], "yay": []}
