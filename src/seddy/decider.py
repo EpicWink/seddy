@@ -17,7 +17,7 @@ class Decider:
     """SWF decider.
 
     Args:
-        workflows: decider workflows
+        workflows_spec_file: workflows specifications file path
         domain: SWF domain to poll in
         task_list: SWF decider task-list
         identity: decider identity, default: automatically generated from
@@ -30,12 +30,12 @@ class Decider:
 
     def __init__(
         self,
-        workflows: t.List[_specs.Workflow],
+        workflows_spec_file: pathlib.Path,
         domain: str,
         task_list: str,
         identity: str = None,
     ):
-        self.workflows = workflows
+        self.workflows_spec_file = workflows_spec_file
         self.domain = domain
         self.task_list = task_list
         self.client = _util.get_swf_client()
@@ -69,10 +69,12 @@ class Decider:
             workflow decisions
         """
 
-        workflow_ids = [(w.name, w.version) for w in self.workflows]
+        workflows = _specs.load_workflows(self.workflows_spec_file)
+        workflow_ids = [(w.name, w.version) for w in workflows]
         task_id = (task["workflowType"]["name"], task["workflowType"]["version"])
         idx = workflow_ids.index(task_id)
-        workflow = self.workflows[idx]
+        workflow = workflows[idx]
+        workflow.setup()
         return workflow.make_decisions(task)
 
     def _respond_decision_task_completed(
@@ -138,7 +140,5 @@ def run_app(
         identity: decider identity, default: automatically generated
     """
 
-    workflows = _specs.load_workflows(workflows_spec_file)
-    _specs.setup_workflows(workflows)
-    decider = Decider(workflows, domain, task_list, identity)
+    decider = Decider(workflows_spec_file, domain, task_list, identity)
     decider.run()

@@ -1,7 +1,6 @@
 """Test ``seddy.decider``."""
 
 import os
-import json
 import socket
 from unittest import mock
 
@@ -43,11 +42,15 @@ class TestDecider:
             yield env_update
 
     @pytest.fixture
-    def instance(self, workflow_mocks, aws_environment):
-        return seddy_decider.Decider(workflow_mocks, "spam", "eggs", "abcd1234")
+    def workflows_spec_file(self, tmp_path):
+        return tmp_path / "workflows.json"
 
-    def test_init(self, instance, workflow_mocks):
-        assert instance.workflows == workflow_mocks
+    @pytest.fixture
+    def instance(self, workflows_spec_file, aws_environment):
+        return seddy_decider.Decider(workflows_spec_file, "spam", "eggs", "abcd1234")
+
+    def test_init(self, instance, workflows_spec_file):
+        assert instance.workflows_spec_file == workflows_spec_file
         assert instance.domain == "spam"
         assert instance.task_list == "eggs"
         assert isinstance(instance.client, botocore_client.BaseClient)
@@ -118,6 +121,10 @@ class TestDecider:
         }
 
     def test_make_decisions(self, instance, workflow_mocks):
+        # Setup environment
+        load_mock = mock.Mock(return_value=workflow_mocks)
+        load_patch = mock.patch.object(seddy_specs, "load_workflows", load_mock)
+
         # Build input
         task = {
             "ResponseMetadata": mock.ANY,
@@ -161,7 +168,8 @@ class TestDecider:
         }
 
         # Run function
-        res = instance._make_decisions(task)
+        with load_patch:
+            res = instance._make_decisions(task)
 
         # Check result
         assert res is workflow_mocks[1].make_decisions.return_value
@@ -299,54 +307,14 @@ def test_run_app(tmp_path):
     )
 
     # Build input
-    workflows_spec = {
-        "version": "1.0",
-        "workflows": [
-            {
-                "spec_type": "dag",
-                "name": "spam",
-                "version": "1.0",
-                "tasks": [
-                    {
-                        "id": "foo",
-                        "type": {"name": "spam-foo", "version": "0.3"},
-                        "heartbeat": "60",
-                        "timeout": "86400",
-                        "task_list": "eggs",
-                        "priority": "1",
-                    },
-                    {
-                        "id": "bar",
-                        "type": {"name": "spam-bar", "version": "0.1"},
-                        "heartbeat": "60",
-                        "timeout": "86400",
-                        "dependencies": "foo",
-                    },
-                    {
-                        "id": "yay",
-                        "type": {"name": "spam-foo", "version": "0.3"},
-                        "heartbeat": "60",
-                        "timeout": "86400",
-                        "dependencies": "foo",
-                    },
-                ],
-            }
-        ],
-    }
     workflows_spec_json = tmp_path / "workflows.json"
-    workflows_spec_json.write_text(json.dumps(workflows_spec, indent=4))
 
     # Run function
     with decider_class_patch:
         seddy_decider.run_app(workflows_spec_json, "spam", "eggs", "abcd1234")
 
     # Check decider configuration
-    decider_class_mock.assert_called_once_with(mock.ANY, "spam", "eggs", "abcd1234")
+    decider_class_mock.assert_called_once_with(
+        workflows_spec_json, "spam", "eggs", "abcd1234"
+    )
     decider_class_mock.return_value.run.assert_called_once_with()
-
-    workflows = decider_class_mock.call_args_list[0][0][0]
-    assert len(workflows) == 1
-    assert isinstance(workflows[0], seddy_specs.DAGWorkflow)
-    assert workflows[0].name == workflows_spec["workflows"][0]["name"]
-    assert workflows[0].version == workflows_spec["workflows"][0]["version"]
-    assert workflows[0].dependants == {"foo": ["bar", "yay"], "bar": [], "yay": []}

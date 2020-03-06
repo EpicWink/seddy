@@ -31,20 +31,6 @@ def _construct_workflows(workflows_spec: t.Dict[str, t.Any]) -> t.List[Workflow]
     return workflows
 
 
-def setup_workflows(workflows: t.List[Workflow]):
-    """Set-up decider workflows.
-
-    Args:
-        workflows: workflow type specifications
-
-    Returns:
-        decider initialised workflows
-    """
-
-    for workflow in workflows:
-        workflow.setup()
-
-
 def _load_specs(workflows_file: pathlib.Path) -> t.Dict[str, t.Any]:
     """Load workflows specifications file.
 

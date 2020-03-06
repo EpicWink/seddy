@@ -8,7 +8,6 @@ __all__ = [
     "DAGBuilder",
     "DAGWorkflow",
     "load_workflows",
-    "setup_workflows",
     "WORKFLOW",
 ]
 
@@ -19,5 +18,4 @@ from ._specs import Workflow
 from ._specs import DAGBuilder
 from ._specs import DAGWorkflow
 from ._specs import load_workflows
-from ._specs import setup_workflows
 from ._specs import WORKFLOW
