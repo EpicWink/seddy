@@ -78,7 +78,6 @@ class DAGBuilder(_base.DecisionsBuilder):
                 self._activity_task_events[attrs["activityId"]].append(event)
 
     def _process_activity_task_completed_event(self, event: t.Dict[str, t.Any]):
-        # Schedule dependants
         scheduled_event = self._scheduled[event["eventId"]]
         attrs = scheduled_event["activityTaskScheduledEventAttributes"]
         dependants_task = self.workflow.dependants[attrs["activityId"]]
@@ -96,7 +95,7 @@ class DAGBuilder(_base.DecisionsBuilder):
             if dependencies_satisfied:
                 self._schedule_task(activity_task, self.task["events"][0])
 
-        # Complete workflow
+    def _complete_workflow(self):
         tasks_complete = True
         for events in self._activity_task_events.values():
             if not events or events[-1]["eventType"] != "ActivityTaskCompleted":
@@ -116,7 +115,6 @@ class DAGBuilder(_base.DecisionsBuilder):
                 decision_attrs = {"result": json.dumps(result)}
                 decision["completeWorkflowExecutionDecisionAttributes"] = decision_attrs
             self.decisions = [decision]
-            return True
 
     def _process_activity_task_failed_event(self, event: t.Dict[str, t.Any]):
         attr = self._scheduled[event["eventId"]]["activityTaskScheduledEventAttributes"]
@@ -182,8 +180,7 @@ class DAGBuilder(_base.DecisionsBuilder):
         assert self.task["events"][-2]["eventType"] == "DecisionTaskScheduled"
         for event in events[:-2]:
             if event["eventType"] == "ActivityTaskCompleted":
-                if self._process_activity_task_completed_event(event):
-                    break
+                self._process_activity_task_completed_event(event)
             elif event["eventType"] == "ActivityTaskFailed":
                 self._process_activity_task_failed_event(event)
                 break
@@ -195,6 +192,8 @@ class DAGBuilder(_base.DecisionsBuilder):
                 break
             elif event["eventType"] == "WorkflowExecutionStarted":
                 self._process_workflow_execution_started_event(event)
+        else:
+            self._complete_workflow()
 
     def build_decisions(self):
         self._get_scheduled_references()
