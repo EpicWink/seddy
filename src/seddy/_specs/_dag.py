@@ -29,11 +29,8 @@ class DAGBuilder(_base.DecisionsBuilder):
         self._scheduled = {}
         self._activity_task_events = {at["id"]: [] for at in workflow.task_specs}
 
-    def _schedule_task(
-        self,
-        activity_task: t.Dict[str, t.Any],
-        workflow_started_event: t.Dict[str, t.Any],
-    ):
+    def _schedule_task(self, activity_task: t.Dict[str, t.Any]):
+        workflow_started_event = self.task["events"][0]
         assert workflow_started_event["eventType"] == "WorkflowExecutionStarted"
         attrs = workflow_started_event["workflowExecutionStartedEventAttributes"]
         decision_attributes = {
@@ -93,7 +90,7 @@ class DAGBuilder(_base.DecisionsBuilder):
                     dependencies_satisfied = False
                     break
             if dependencies_satisfied:
-                self._schedule_task(activity_task, self.task["events"][0])
+                self._schedule_task(activity_task)
 
     def _complete_workflow(self):
         tasks_complete = True
@@ -158,12 +155,11 @@ class DAGBuilder(_base.DecisionsBuilder):
         decisions.append({"decisionType": "CancelWorkflowExecution"})
         self.decisions = decisions
 
-    def _process_workflow_execution_started_event(self, event: t.Dict[str, t.Any]):
-        assert event is self.task["events"][0]
+    def _schedule_initial_activity_tasks(self):
         for activity_task in self.workflow.task_specs:
             assert not self._activity_task_events[activity_task["id"]]
             if not activity_task.get("dependencies"):
-                self._schedule_task(activity_task, event)
+                self._schedule_task(activity_task)
 
     def _process_new_events(self):
         # Get new events
@@ -191,7 +187,7 @@ class DAGBuilder(_base.DecisionsBuilder):
                 self._process_cancel_requested_event()
                 break
             elif event["eventType"] == "WorkflowExecutionStarted":
-                self._process_workflow_execution_started_event(event)
+                self._schedule_initial_activity_tasks()
         else:
             self._complete_workflow()
 
