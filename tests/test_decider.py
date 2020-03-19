@@ -175,6 +175,28 @@ class TestDecider:
         # Check result
         assert res is workflow_mocks[1].make_decisions.return_value
 
+    def test_make_decisions_unsupported(self, instance, workflow_mocks):
+        """Check decision-making raises for unsupported workflows."""
+        # Setup environment
+        load_mock = mock.Mock(return_value=workflow_mocks)
+        load_patch = mock.patch.object(seddy_specs, "load_workflows", load_mock)
+
+        # Build input
+        task = {
+            "ResponseMetadata": mock.ANY,
+            "taskToken": mock.ANY,
+            "workflowExecution": {"runId": mock.ANY, "workflowId": "1234"},
+            "workflowType": {"name": "bar", "version": "0.43"},
+        }
+
+        # Run function
+        with pytest.raises(seddy_decider.UnsupportedWorkflow) as e:
+            with load_patch:
+                instance._make_decisions(task)
+
+        # Check result
+        assert e.value.args[0] == {"name": "bar", "version": "0.43"}
+
     @pytest.fixture
     def patch_moto_swf(self):
         """Temporarily patch ``moto`` to fix closed execution info."""
@@ -268,6 +290,32 @@ class TestDecider:
         # Check calls
         instance._poll_for_decision_task.assert_called_once_with()
         instance._make_decisions.assert_not_called()
+        instance._respond_decision_task_completed.assert_not_called()
+
+    def test_poll_and_run_unsupported(self, workflow_mocks, aws_environment):
+        """Task for workflow not in specifications file."""
+        # Setup environment
+        task = {
+            "taskToken": "spam",
+            "workflowType": {"name": "bar", "version": "0.43"},
+            "workflowExecution": {"workflowId": "1234", "runId": "9abc"},
+        }
+
+        class Decider(seddy_decider.Decider):
+            _poll_for_decision_task = mock.Mock(return_value=task)
+            _make_decisions = mock.Mock(
+                side_effect=seddy_decider.UnsupportedWorkflow(task["workflowType"])
+            )
+            _respond_decision_task_completed = mock.Mock()
+
+        instance = Decider(workflow_mocks, "spam", "eggs")
+
+        # Run function
+        instance._poll_and_run()
+
+        # Check calls
+        instance._poll_for_decision_task.assert_called_once_with()
+        instance._make_decisions.assert_called_once_with(task)
         instance._respond_decision_task_completed.assert_not_called()
 
     def test_run_uncaught(self, workflow_mocks, aws_environment):

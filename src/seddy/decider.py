@@ -14,6 +14,10 @@ logger = lg.getLogger(__name__)
 socket.setdefaulttimeout(70.0)
 
 
+class UnsupportedWorkflow(LookupError):
+    """Decider doesn't support workflow."""
+
+
 class Decider:
     """SWF decider.
 
@@ -74,7 +78,10 @@ class Decider:
         workflows = _specs.load_workflows(self.workflows_spec_file)
         workflow_ids = [(w.name, w.version) for w in workflows]
         task_id = (task["workflowType"]["name"], task["workflowType"]["version"])
-        idx = workflow_ids.index(task_id)
+        try:
+            idx = workflow_ids.index(task_id)
+        except ValueError:
+            raise UnsupportedWorkflow(task["workflowType"]) from None
         workflow = workflows[idx]
         workflow.setup()
         return workflow.make_decisions(task)
@@ -118,7 +125,11 @@ class Decider:
             task["workflowExecution"]["workflowId"],
             task["workflowExecution"]["runId"],
         )
-        decisions = self._make_decisions(task)
+        try:
+            decisions = self._make_decisions(task)
+        except UnsupportedWorkflow:
+            logger.error("Unsupported workflow type: %s" % task["workflowType"])
+            return
         self._respond_decision_task_completed(decisions, task)
 
     def _run_uncaught(self):
