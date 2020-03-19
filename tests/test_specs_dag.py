@@ -1,10 +1,14 @@
 """Test ``seddy._specs._dag``."""
 
+import logging as lg
+
 from seddy import _specs as seddy_specs
 import pytest
 
+lg.root.setLevel(lg.DEBUG)
 
-class TestDAGBuilder:
+
+class TestDAGDecisionsBuilding:
     """Test ``seddy._specs.DAGBuilder``."""
 
     @pytest.fixture
@@ -51,588 +55,991 @@ class TestDAGBuilder:
         workflow.setup()
         return workflow
 
-    @pytest.fixture(
-        params=[
-            "workflow-start",
-            "other-event",
-            "foo-complete",
-            "foo-complete-yay-unsatisfied",
-            "yay-complete",
-            "bar-complete",
-            "tin-complete",
-            "bar-and-yay-complete",
-            "foo-failed",
-            "foo-timed-out",
-            "workflow-cancelled",
-            "workflow-cancelled-bar-yay",
-        ]
-    )
-    def _task_and_expected_decisions(self, request, workflow):
-        """Example task and expected associated decisions."""
-        # Events sections
-        workflow_start_events = [
-            {
-                "eventId": 1,
-                "eventType": "WorkflowExecutionStarted",
-                "workflowExecutionStartedEventAttributes": {
-                    "input": (
-                        "{\n"
-                        '    "foo": {"spam": [42], "eggs": null},\n'
-                        '    "bar": null,\n'
-                        '    "yay": {"spam": [17], "eggs": [42]}\n'
-                        "}"
-                    )
-                },
-            },
-            {"eventId": 2, "eventType": "DecisionTaskScheduled"},
-            {"eventId": 3, "eventType": "DecisionTaskStarted"},
-        ]
-        other_event_events = [
-            {"eventId": 4, "eventType": "DecisionTaskCompleted"},
-            {
-                "eventId": 5,
-                "eventType": "WorkflowExecutionSignaled",
-                "workflowExecutionSignaledEventAttributes": {"signalName": "blue"},
-            },
-            {"eventId": 6, "eventType": "DecisionTaskScheduled"},
-            {"eventId": 7, "eventType": "DecisionTaskStarted"},
-        ]
-        foo_complete_events = [
-            {"eventId": 4, "eventType": "DecisionTaskCompleted"},
-            {
-                "eventId": 5,
-                "eventType": "ActivityTaskScheduled",
-                "activityTaskScheduledEventAttributes": {
-                    "activityId": "foo",
-                    "activityType": {"name": "spam-foo", "version": "0.3"},
-                    "decisionTaskCompletedEventId": 4,
-                    "input": '{"spam": [42], "eggs": null}',
-                },
-            },
-            {
-                "eventId": 6,
-                "eventType": "ActivityTaskStarted",
-                "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
-            },
-            {
-                "eventId": 7,
-                "eventType": "ActivityTaskCompleted",
-                "activityTaskCompletedEventAttributes": {
-                    "scheduledEventId": 5,
-                    "result": "3",
-                },
-            },
-            {"eventId": 8, "eventType": "DecisionTaskScheduled"},
-            {"eventId": 9, "eventType": "DecisionTaskStarted"},
-        ]
-        yay_complete_events = [
-            {"eventId": 10, "eventType": "DecisionTaskCompleted"},
-            {
-                "eventId": 11,
-                "eventType": "ActivityTaskScheduled",
-                "activityTaskScheduledEventAttributes": {
-                    "activityId": "yay",
-                    "activityType": {"name": "spam-foo", "version": "0.3"},
-                    "decisionTaskCompletedEventId": 10,
-                    "input": '{"spam": [17], "eggs": [42]}',
-                },
-            },
-            {
-                "eventId": 12,
-                "eventType": "ActivityTaskScheduled",
-                "activityTaskScheduledEventAttributes": {
-                    "activityId": "bar",
-                    "activityType": {"name": "spam-bar", "version": "0.1"},
-                    "decisionTaskCompletedEventId": 10,
-                    "input": "null",
-                },
-            },
-            {
-                "eventId": 13,
-                "eventType": "ActivityTaskStarted",
-                "activityTaskStartedEventAttributes": {"scheduledEventId": 11},
-            },
-            {
-                "eventId": 14,
-                "eventType": "ActivityTaskStarted",
-                "activityTaskStartedEventAttributes": {"scheduledEventId": 12},
-            },
-            {
-                "eventId": 15,
-                "eventType": "ActivityTaskCompleted",
-                "activityTaskCompletedEventAttributes": {
-                    "scheduledEventId": 11,
-                    "result": "5",
-                },
-            },
-            {"eventId": 16, "eventType": "DecisionTaskScheduled"},
-            {"eventId": 17, "eventType": "DecisionTaskStarted"},
-        ]
-        bar_complete_events = [
-            {"eventId": 18, "eventType": "DecisionTaskCompleted"},
-            {
-                "eventId": 19,
-                "eventType": "ActivityTaskScheduled",
-                "activityTaskScheduledEventAttributes": {
-                    "activityId": "tin",
-                    "activityType": {"name": "spam-tin", "version": "1.2"},
-                    "decisionTaskCompletedEventId": 18,
-                },
-            },
-            {
-                "eventId": 20,
-                "eventType": "ActivityTaskStarted",
-                "activityTaskStartedEventAttributes": {"scheduledEventId": 19},
-            },
-            {
-                "eventId": 21,
-                "eventType": "ActivityTaskCompleted",
-                "activityTaskCompletedEventAttributes": {
-                    "scheduledEventId": 12,
-                    "result": '{"a": 9, "b": "red"}',
-                },
-            },
-            {"eventId": 22, "eventType": "DecisionTaskScheduled"},
-            {"eventId": 23, "eventType": "DecisionTaskStarted"},
-        ]
-        tin_complete_events = [
-            {"eventId": 24, "eventType": "DecisionTaskCompleted"},
-            {
-                "eventId": 25,
-                "eventType": "ActivityTaskCompleted",
-                "activityTaskCompletedEventAttributes": {"scheduledEventId": 19},
-            },
-            {"eventId": 26, "eventType": "DecisionTaskScheduled"},
-            {"eventId": 27, "eventType": "DecisionTaskStarted"},
-        ]
-        bar_and_yay_complete_events = [
-            {"eventId": 10, "eventType": "DecisionTaskCompleted"},
-            {
-                "eventId": 11,
-                "eventType": "ActivityTaskScheduled",
-                "activityTaskScheduledEventAttributes": {
-                    "activityId": "yay",
-                    "activityType": {"name": "spam-foo", "version": "0.3"},
-                    "decisionTaskCompletedEventId": 10,
-                    "input": '{"spam": [17], "eggs": [42]}',
-                },
-            },
-            {
-                "eventId": 12,
-                "eventType": "ActivityTaskScheduled",
-                "activityTaskScheduledEventAttributes": {
-                    "activityId": "bar",
-                    "activityType": {"name": "spam-bar", "version": "0.1"},
-                    "decisionTaskCompletedEventId": 10,
-                    "input": "null",
-                },
-            },
-            {
-                "eventId": 13,
-                "eventType": "ActivityTaskStarted",
-                "activityTaskStartedEventAttributes": {"scheduledEventId": 11},
-            },
-            {
-                "eventId": 14,
-                "eventType": "ActivityTaskStarted",
-                "activityTaskStartedEventAttributes": {"scheduledEventId": 12},
-            },
-            {
-                "eventId": 15,
-                "eventType": "ActivityTaskCompleted",
-                "activityTaskCompletedEventAttributes": {
-                    "scheduledEventId": 11,
-                    "result": "5",
-                },
-            },
-            {
-                "eventId": 16,
-                "eventType": "ActivityTaskCompleted",
-                "activityTaskCompletedEventAttributes": {
-                    "scheduledEventId": 12,
-                    "result": '{"a": 9, "b": "red"}',
-                },
-            },
-            {"eventId": 17, "eventType": "DecisionTaskScheduled"},
-            {"eventId": 18, "eventType": "DecisionTaskStarted"},
-        ]
-        foo_failed_events = [
-            {"eventId": 4, "eventType": "DecisionTaskCompleted"},
-            {
-                "eventId": 5,
-                "eventType": "ActivityTaskScheduled",
-                "activityTaskScheduledEventAttributes": {
-                    "activityId": "foo",
-                    "activityType": {"name": "spam-foo", "version": "0.3"},
-                    "decisionTaskCompletedEventId": 4,
-                    "input": '{"spam": [42], "eggs": null}',
-                },
-            },
-            {
-                "eventId": 6,
-                "eventType": "ActivityTaskStarted",
-                "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
-            },
-            {
-                "eventId": 7,
-                "eventType": "ActivityTaskFailed",
-                "activityTaskFailedEventAttributes": {
-                    "scheduledEventId": 5,
-                    "details": "The specified spam does not exist",
-                    "reason": "spamError",
-                },
-            },
-            {"eventId": 8, "eventType": "DecisionTaskScheduled"},
-            {"eventId": 9, "eventType": "DecisionTaskStarted"},
-        ]
-        foo_timed_out_events = [
-            {"eventId": 4, "eventType": "DecisionTaskCompleted"},
-            {
-                "eventId": 5,
-                "eventType": "ActivityTaskScheduled",
-                "activityTaskScheduledEventAttributes": {
-                    "activityId": "foo",
-                    "activityType": {"name": "spam-foo", "version": "0.3"},
-                    "decisionTaskCompletedEventId": 4,
-                    "input": '{"spam": [42], "eggs": null}',
-                },
-            },
-            {
-                "eventId": 6,
-                "eventType": "ActivityTaskStarted",
-                "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
-            },
-            {
-                "eventId": 7,
-                "eventType": "ActivityTaskTimedOut",
-                "activityTaskTimedOutEventAttributes": {
-                    "scheduledEventId": 5,
-                    "details": "42 / 50",
-                    "timeoutType": "HEARTBEAT",
-                },
-            },
-            {"eventId": 8, "eventType": "DecisionTaskScheduled"},
-            {"eventId": 9, "eventType": "DecisionTaskStarted"},
-        ]
-        workflow_cancelled_events = [
-            {"eventId": 4, "eventType": "DecisionTaskCompleted"},
-            {
-                "eventId": 5,
-                "eventType": "ActivityTaskScheduled",
-                "activityTaskScheduledEventAttributes": {
-                    "activityId": "foo",
-                    "activityType": {"name": "spam-foo", "version": "0.3"},
-                    "decisionTaskCompletedEventId": 4,
-                    "input": '{"spam": [42], "eggs": null}',
-                },
-            },
-            {
-                "eventId": 6,
-                "eventType": "ActivityTaskStarted",
-                "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
-            },
-            {"eventId": 7, "eventType": "WorkflowExecutionCancelRequested"},
-            {"eventId": 8, "eventType": "DecisionTaskScheduled"},
-            {"eventId": 9, "eventType": "DecisionTaskStarted"},
-        ]
-        workflow_cancelled_bar_yay_events = [
-            {"eventId": 10, "eventType": "DecisionTaskCompleted"},
-            {
-                "eventId": 11,
-                "eventType": "ActivityTaskScheduled",
-                "activityTaskScheduledEventAttributes": {
-                    "activityId": "yay",
-                    "activityType": {"name": "spam-foo", "version": "0.3"},
-                    "decisionTaskCompletedEventId": 10,
-                    "input": '{"spam": [17], "eggs": [42]}',
-                },
-            },
-            {
-                "eventId": 12,
-                "eventType": "ActivityTaskScheduled",
-                "activityTaskScheduledEventAttributes": {
-                    "activityId": "bar",
-                    "activityType": {"name": "spam-bar", "version": "0.1"},
-                    "decisionTaskCompletedEventId": 10,
-                    "input": "null",
-                },
-            },
-            {
-                "eventId": 13,
-                "eventType": "ActivityTaskStarted",
-                "activityTaskStartedEventAttributes": {"scheduledEventId": 11},
-            },
-            {"eventId": 14, "eventType": "WorkflowExecutionCancelRequested"},
-            {"eventId": 15, "eventType": "DecisionTaskScheduled"},
-            {"eventId": 16, "eventType": "DecisionTaskStarted"},
-        ]
-
-        # Scenarios
-        task = None
-        expected_decisions = []
-        if request.param == "workflow-start":
-            task = {
-                "taskToken": "spam",
-                "previousStartedEventId": 0,
-                "startedEventId": workflow_start_events[-1]["eventId"],
-                "events": workflow_start_events,
-            }
-            expected_decisions = [
+    def test_workflow_start(self, workflow):
+        """Test DAG decisions building on workflow start."""
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 0,
+            "startedEventId": 3,
+            "events": [
                 {
-                    "decisionType": "ScheduleActivityTask",
-                    "scheduleActivityTaskDecisionAttributes": {
+                    "eventId": 1,
+                    "eventType": "WorkflowExecutionStarted",
+                    "workflowExecutionStartedEventAttributes": {
+                        "input": (
+                            "{\n"
+                            '    "foo": {"spam": [42], "eggs": null},\n'
+                            '    "bar": null,\n'
+                            '    "yay": {"spam": [17], "eggs": [42]}\n'
+                            "}"
+                        )
+                    },
+                },
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 3, "eventType": "DecisionTaskStarted"},
+            ],
+        }
+        expected_decisions = [
+            {
+                "decisionType": "ScheduleActivityTask",
+                "scheduleActivityTaskDecisionAttributes": {
+                    "activityId": "foo",
+                    "activityType": {"name": "spam-foo", "version": "0.3"},
+                    "input": '{"spam": [42], "eggs": null}',
+                    "heartbeatTimeout": "60",
+                    "startToCloseTimeout": "86400",
+                    "taskPriority": "1",
+                    "taskList": {"name": "eggs"},
+                },
+            },
+        ]
+        instance = seddy_specs.DAGBuilder(workflow, task)
+        instance.build_decisions()
+        assert instance.decisions == expected_decisions
+
+    def test_other_event(self, workflow):
+        """Test DAG decisions building after other event."""
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 3,
+            "startedEventId": 7,
+            "events": [
+                {
+                    "eventId": 1,
+                    "eventType": "WorkflowExecutionStarted",
+                    "workflowExecutionStartedEventAttributes": {
+                        "input": (
+                            "{\n"
+                            '    "foo": {"spam": [42], "eggs": null},\n'
+                            '    "bar": null,\n'
+                            '    "yay": {"spam": [17], "eggs": [42]}\n'
+                            "}"
+                        )
+                    },
+                },
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 3, "eventType": "DecisionTaskStarted"},
+                {"eventId": 4, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 5,
+                    "eventType": "WorkflowExecutionSignaled",
+                    "workflowExecutionSignaledEventAttributes": {"signalName": "blue"},
+                },
+                {"eventId": 6, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 7, "eventType": "DecisionTaskStarted"},
+            ]
+        }
+        instance = seddy_specs.DAGBuilder(workflow, task)
+        instance.build_decisions()
+        assert instance.decisions == []
+
+    def test_foo_complete(self, workflow):
+        """Test DAG decisions building after foo activity completes."""
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 3,
+            "startedEventId": 9,
+            "events": [
+                {
+                    "eventId": 1,
+                    "eventType": "WorkflowExecutionStarted",
+                    "workflowExecutionStartedEventAttributes": {
+                        "input": (
+                            "{\n"
+                            '    "foo": {"spam": [42], "eggs": null},\n'
+                            '    "bar": null,\n'
+                            '    "yay": {"spam": [17], "eggs": [42]}\n'
+                            "}"
+                        )
+                    },
+                },
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 3, "eventType": "DecisionTaskStarted"},
+                {"eventId": 4, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 5,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
                         "activityId": "foo",
                         "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 4,
                         "input": '{"spam": [42], "eggs": null}',
-                        "heartbeatTimeout": "60",
-                        "startToCloseTimeout": "86400",
-                        "taskPriority": "1",
-                        "taskList": {"name": "eggs"},
                     },
                 },
+                {
+                    "eventId": 6,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
+                },
+                {
+                    "eventId": 7,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 5,
+                        "result": "3",
+                    },
+                },
+                {"eventId": 8, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 9, "eventType": "DecisionTaskStarted"},
             ]
-        if request.param == "other-event":
-            task = {
-                "taskToken": "spam",
-                "previousStartedEventId": workflow_start_events[-1]["eventId"],
-                "startedEventId": other_event_events[-1]["eventId"],
-                "events": workflow_start_events + other_event_events,
-            }
-            expected_decisions = []
-        elif request.param == "foo-complete":
-            task = {
-                "taskToken": "spam",
-                "previousStartedEventId": workflow_start_events[-1]["eventId"],
-                "startedEventId": foo_complete_events[-1]["eventId"],
-                "events": workflow_start_events + foo_complete_events,
-            }
-            expected_decisions = [
+        }
+        expected_decisions = [
+            {
+                "decisionType": "ScheduleActivityTask",
+                "scheduleActivityTaskDecisionAttributes": {
+                    "activityId": "bar",
+                    "activityType": {"name": "spam-bar", "version": "0.1"},
+                    "input": "null",
+                    "heartbeatTimeout": "60",
+                    "startToCloseTimeout": "86400",
+                },
+            },
+            {
+                "decisionType": "ScheduleActivityTask",
+                "scheduleActivityTaskDecisionAttributes": {
+                    "activityId": "yay",
+                    "activityType": {"name": "spam-foo", "version": "0.3"},
+                    "input": '{"spam": [17], "eggs": [42]}',
+                    "heartbeatTimeout": "60",
+                    "startToCloseTimeout": "86400",
+                },
+            },
+        ]
+        instance = seddy_specs.DAGBuilder(workflow, task)
+        instance.build_decisions()
+        assert instance.decisions == expected_decisions
+
+    def test_foo_complete_yay_unsatisfied(self, workflow):
+        """Test DAG decisions building after foo completes yet yay not ready."""
+        workflow.dependants["bar"] = ["yay"]
+        assert workflow.task_specs[2]["id"] == "yay"
+        workflow.task_specs[2]["dependencies"] = ["foo", "bar"]
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 3,
+            "startedEventId": 9,
+            "events": [
                 {
-                    "decisionType": "ScheduleActivityTask",
-                    "scheduleActivityTaskDecisionAttributes": {
-                        "activityId": "bar",
-                        "activityType": {"name": "spam-bar", "version": "0.1"},
-                        "input": "null",
-                        "heartbeatTimeout": "60",
-                        "startToCloseTimeout": "86400",
+                    "eventId": 1,
+                    "eventType": "WorkflowExecutionStarted",
+                    "workflowExecutionStartedEventAttributes": {
+                        "input": (
+                            "{\n"
+                            '    "foo": {"spam": [42], "eggs": null},\n'
+                            '    "bar": null,\n'
+                            '    "yay": {"spam": [17], "eggs": [42]}\n'
+                            "}"
+                        )
+                    },
+                },
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 3, "eventType": "DecisionTaskStarted"},
+                {"eventId": 4, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 5,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "foo",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 4,
+                        "input": '{"spam": [42], "eggs": null}',
                     },
                 },
                 {
-                    "decisionType": "ScheduleActivityTask",
-                    "scheduleActivityTaskDecisionAttributes": {
+                    "eventId": 6,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
+                },
+                {
+                    "eventId": 7,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 5,
+                        "result": "3",
+                    },
+                },
+                {"eventId": 8, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 9, "eventType": "DecisionTaskStarted"},
+            ],
+        }
+        expected_decisions = [
+            {
+                "decisionType": "ScheduleActivityTask",
+                "scheduleActivityTaskDecisionAttributes": {
+                    "activityId": "bar",
+                    "activityType": {"name": "spam-bar", "version": "0.1"},
+                    "input": "null",
+                    "heartbeatTimeout": "60",
+                    "startToCloseTimeout": "86400",
+                },
+            },
+        ]
+        instance = seddy_specs.DAGBuilder(workflow, task)
+        instance.build_decisions()
+        assert instance.decisions == expected_decisions
+
+    def test_yay_complete(self, workflow):
+        """Test DAG decisions building after yay activity completes."""
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 9,
+            "startedEventId": 17,
+            "events": [
+                {
+                    "eventId": 1,
+                    "eventType": "WorkflowExecutionStarted",
+                    "workflowExecutionStartedEventAttributes": {
+                        "input": (
+                            "{\n"
+                            '    "foo": {"spam": [42], "eggs": null},\n'
+                            '    "bar": null,\n'
+                            '    "yay": {"spam": [17], "eggs": [42]}\n'
+                            "}"
+                        )
+                    },
+                },
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 3, "eventType": "DecisionTaskStarted"},
+                {"eventId": 4, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 5,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "foo",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 4,
+                        "input": '{"spam": [42], "eggs": null}',
+                    },
+                },
+                {
+                    "eventId": 6,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
+                },
+                {
+                    "eventId": 7,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 5,
+                        "result": "3",
+                    },
+                },
+                {"eventId": 8, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 9, "eventType": "DecisionTaskStarted"},
+                {"eventId": 10, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 11,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
                         "activityId": "yay",
                         "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 10,
                         "input": '{"spam": [17], "eggs": [42]}',
-                        "heartbeatTimeout": "60",
-                        "startToCloseTimeout": "86400",
                     },
                 },
-            ]
-        elif request.param == "foo-complete-yay-unsatisfied":
-            workflow.dependants["bar"] = ["yay"]
-            assert workflow.task_specs[2]["id"] == "yay"
-            workflow.task_specs[2]["dependencies"] = ["foo", "bar"]
-
-            task = {
-                "taskToken": "spam",
-                "previousStartedEventId": workflow_start_events[-1]["eventId"],
-                "startedEventId": foo_complete_events[-1]["eventId"],
-                "events": workflow_start_events + foo_complete_events,
-            }
-            expected_decisions = [
                 {
-                    "decisionType": "ScheduleActivityTask",
-                    "scheduleActivityTaskDecisionAttributes": {
+                    "eventId": 12,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
                         "activityId": "bar",
                         "activityType": {"name": "spam-bar", "version": "0.1"},
+                        "decisionTaskCompletedEventId": 10,
                         "input": "null",
-                        "heartbeatTimeout": "60",
-                        "startToCloseTimeout": "86400",
                     },
                 },
-            ]
-        elif request.param in "yay-complete":
-            task = {
-                "taskToken": "spam",
-                "previousStartedEventId": foo_complete_events[-1]["eventId"],
-                "startedEventId": yay_complete_events[-1]["eventId"],
-                "events": (
-                    workflow_start_events + foo_complete_events + yay_complete_events
-                ),
-            }
-            expected_decisions = [
                 {
-                    "decisionType": "ScheduleActivityTask",
-                    "scheduleActivityTaskDecisionAttributes": {
+                    "eventId": 13,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 11},
+                },
+                {
+                    "eventId": 14,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 12},
+                },
+                {
+                    "eventId": 15,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 11,
+                        "result": "5",
+                    },
+                },
+                {"eventId": 16, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 17, "eventType": "DecisionTaskStarted"},
+            ],
+        }
+        expected_decisions = [
+            {
+                "decisionType": "ScheduleActivityTask",
+                "scheduleActivityTaskDecisionAttributes": {
+                    "activityId": "tin",
+                    "activityType": {"name": "spam-tin", "version": "1.2"},
+                    "heartbeatTimeout": "30",
+                    "startToCloseTimeout": "43200",
+                },
+            },
+        ]
+        instance = seddy_specs.DAGBuilder(workflow, task)
+        instance.build_decisions()
+        assert instance.decisions == expected_decisions
+
+    def test_bar_complete(self, workflow):
+        """Test DAG decisions building after bar activity completes."""
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 17,
+            "startedEventId": 23,
+            "events": [
+                {
+                    "eventId": 1,
+                    "eventType": "WorkflowExecutionStarted",
+                    "workflowExecutionStartedEventAttributes": {
+                        "input": (
+                            "{\n"
+                            '    "foo": {"spam": [42], "eggs": null},\n'
+                            '    "bar": null,\n'
+                            '    "yay": {"spam": [17], "eggs": [42]}\n'
+                            "}"
+                        )
+                    },
+                },
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 3, "eventType": "DecisionTaskStarted"},
+                {"eventId": 4, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 5,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "foo",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 4,
+                        "input": '{"spam": [42], "eggs": null}',
+                    },
+                },
+                {
+                    "eventId": 6,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
+                },
+                {
+                    "eventId": 7,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 5,
+                        "result": "3",
+                    },
+                },
+                {"eventId": 8, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 9, "eventType": "DecisionTaskStarted"},
+                {"eventId": 10, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 11,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "yay",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 10,
+                        "input": '{"spam": [17], "eggs": [42]}',
+                    },
+                },
+                {
+                    "eventId": 12,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "bar",
+                        "activityType": {"name": "spam-bar", "version": "0.1"},
+                        "decisionTaskCompletedEventId": 10,
+                        "input": "null",
+                    },
+                },
+                {
+                    "eventId": 13,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 11},
+                },
+                {
+                    "eventId": 14,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 12},
+                },
+                {
+                    "eventId": 15,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 11,
+                        "result": "5",
+                    },
+                },
+                {"eventId": 16, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 17, "eventType": "DecisionTaskStarted"},
+                {"eventId": 18, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 19,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
                         "activityId": "tin",
                         "activityType": {"name": "spam-tin", "version": "1.2"},
-                        "heartbeatTimeout": "30",
-                        "startToCloseTimeout": "43200",
+                        "decisionTaskCompletedEventId": 18,
                     },
                 },
-            ]
-        elif request.param == "bar-complete":
-            task = {
-                "taskToken": "spam",
-                "previousStartedEventId": yay_complete_events[-1]["eventId"],
-                "startedEventId": bar_complete_events[-1]["eventId"],
-                "events": (
-                    workflow_start_events
-                    + foo_complete_events
-                    + yay_complete_events
-                    + bar_complete_events
-                ),
-            }
-            expected_decisions = []
-        elif request.param == "tin-complete":
-            task = {
-                "taskToken": "spam",
-                "previousStartedEventId": bar_complete_events[-1]["eventId"],
-                "startedEventId": tin_complete_events[-1]["eventId"],
-                "events": (
-                    workflow_start_events
-                    + foo_complete_events
-                    + yay_complete_events
-                    + bar_complete_events
-                    + tin_complete_events
-                ),
-            }
-            expected_decisions = [
                 {
-                    "decisionType": "CompleteWorkflowExecution",
-                    "completeWorkflowExecutionDecisionAttributes": {
-                        "result": '{"foo": 3, "bar": {"a": 9, "b": "red"}, "yay": 5}'
+                    "eventId": 20,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 19},
+                },
+                {
+                    "eventId": 21,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 12,
+                        "result": '{"a": 9, "b": "red"}',
                     },
-                }
-            ]
-        elif request.param == "bar-and-yay-complete":
-            task = {
-                "taskToken": "spam",
-                "previousStartedEventId": foo_complete_events[-1]["eventId"],
-                "startedEventId": bar_and_yay_complete_events[-1]["eventId"],
-                "events": (
-                    workflow_start_events
-                    + foo_complete_events
-                    + bar_and_yay_complete_events
-                ),
-            }
-            expected_decisions = [
+                },
+                {"eventId": 22, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 23, "eventType": "DecisionTaskStarted"},
+            ],
+        }
+        instance = seddy_specs.DAGBuilder(workflow, task)
+        instance.build_decisions()
+        assert instance.decisions == []
+
+    def test_tin_complete(self, workflow):
+        """Test DAG decisions building after tin activity completes."""
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 23,
+            "startedEventId": 27,
+            "events": [
                 {
-                    "decisionType": "ScheduleActivityTask",
-                    "scheduleActivityTaskDecisionAttributes": {
+                    "eventId": 1,
+                    "eventType": "WorkflowExecutionStarted",
+                    "workflowExecutionStartedEventAttributes": {
+                        "input": (
+                            "{\n"
+                            '    "foo": {"spam": [42], "eggs": null},\n'
+                            '    "bar": null,\n'
+                            '    "yay": {"spam": [17], "eggs": [42]}\n'
+                            "}"
+                        )
+                    },
+                },
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 3, "eventType": "DecisionTaskStarted"},
+                {"eventId": 4, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 5,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "foo",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 4,
+                        "input": '{"spam": [42], "eggs": null}',
+                    },
+                },
+                {
+                    "eventId": 6,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
+                },
+                {
+                    "eventId": 7,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 5,
+                        "result": "3",
+                    },
+                },
+                {"eventId": 8, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 9, "eventType": "DecisionTaskStarted"},
+                {"eventId": 10, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 11,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "yay",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 10,
+                        "input": '{"spam": [17], "eggs": [42]}',
+                    },
+                },
+                {
+                    "eventId": 12,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "bar",
+                        "activityType": {"name": "spam-bar", "version": "0.1"},
+                        "decisionTaskCompletedEventId": 10,
+                        "input": "null",
+                    },
+                },
+                {
+                    "eventId": 13,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 11},
+                },
+                {
+                    "eventId": 14,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 12},
+                },
+                {
+                    "eventId": 15,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 11,
+                        "result": "5",
+                    },
+                },
+                {"eventId": 16, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 17, "eventType": "DecisionTaskStarted"},
+                {"eventId": 18, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 19,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
                         "activityId": "tin",
                         "activityType": {"name": "spam-tin", "version": "1.2"},
-                        "heartbeatTimeout": "30",
-                        "startToCloseTimeout": "43200",
-                    },
-                },
-            ]
-        elif request.param == "foo-failed":
-            task = {
-                "taskToken": "spam",
-                "previousStartedEventId": workflow_start_events[-1]["eventId"],
-                "startedEventId": foo_failed_events[-1]["eventId"],
-                "events": workflow_start_events + foo_failed_events,
-            }
-            expected_decisions = [
-                {
-                    "decisionType": "FailWorkflowExecution",
-                    "failWorkflowExecutionDecisionAttributes": {
-                        "reason": "activityFailure",
-                        "details": "Activity 'foo' failed",
-                    },
-                }
-            ]
-        elif request.param == "foo-timed-out":
-            task = {
-                "taskToken": "spam",
-                "previousStartedEventId": workflow_start_events[-1]["eventId"],
-                "startedEventId": foo_timed_out_events[-1]["eventId"],
-                "events": workflow_start_events + foo_timed_out_events,
-            }
-            expected_decisions = [
-                {
-                    "decisionType": "FailWorkflowExecution",
-                    "failWorkflowExecutionDecisionAttributes": {
-                        "reason": "activityTimeOut",
-                        "details": "Activity 'foo' timed-out",
-                    },
-                }
-            ]
-        elif request.param == "workflow-cancelled":
-            task = {
-                "taskToken": "spam",
-                "previousStartedEventId": workflow_start_events[-1]["eventId"],
-                "startedEventId": workflow_cancelled_events[-1]["eventId"],
-                "events": workflow_start_events + workflow_cancelled_events,
-            }
-            expected_decisions = [
-                {
-                    "decisionType": "RequestCancelActivityTask",
-                    "requestCancelActivityTaskDecisionAttributes": {
-                        "activityId": "foo"
-                    },
-                },
-                {"decisionType": "CancelWorkflowExecution"},
-            ]
-        elif request.param == "workflow-cancelled-bar-yay":
-            task = {
-                "taskToken": "spam",
-                "previousStartedEventId": foo_complete_events[-1]["eventId"],
-                "startedEventId": workflow_cancelled_bar_yay_events[-1]["eventId"],
-                "events": (
-                    workflow_start_events
-                    + foo_complete_events
-                    + workflow_cancelled_bar_yay_events
-                ),
-            }
-            expected_decisions = [
-                {
-                    "decisionType": "RequestCancelActivityTask",
-                    "requestCancelActivityTaskDecisionAttributes": {
-                        "activityId": "bar"
+                        "decisionTaskCompletedEventId": 18,
                     },
                 },
                 {
-                    "decisionType": "RequestCancelActivityTask",
-                    "requestCancelActivityTaskDecisionAttributes": {
-                        "activityId": "yay"
+                    "eventId": 20,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 19},
+                },
+                {
+                    "eventId": 21,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 12,
+                        "result": '{"a": 9, "b": "red"}',
                     },
                 },
-                {"decisionType": "CancelWorkflowExecution"},
-            ]
-        return task, expected_decisions
+                {"eventId": 22, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 23, "eventType": "DecisionTaskStarted"},
+                {"eventId": 24, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 25,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {"scheduledEventId": 19},
+                },
+                {"eventId": 26, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 27, "eventType": "DecisionTaskStarted"},
+            ],
+        }
+        expected_decisions = [
+            {
+                "decisionType": "CompleteWorkflowExecution",
+                "completeWorkflowExecutionDecisionAttributes": {
+                    "result": '{"foo": 3, "bar": {"a": 9, "b": "red"}, "yay": 5}'
+                },
+            }
+        ]
+        instance = seddy_specs.DAGBuilder(workflow, task)
+        instance.build_decisions()
+        assert instance.decisions == expected_decisions
 
-    @pytest.fixture
-    def task(self, _task_and_expected_decisions):
-        """Example task."""
-        return _task_and_expected_decisions[0]
+    def test_bar_and_yay_complete(self, workflow):
+        """Test DAG decisions building after bar and yay activities complete."""
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 9,
+            "startedEventId": 18,
+            "events": [
+                {
+                    "eventId": 1,
+                    "eventType": "WorkflowExecutionStarted",
+                    "workflowExecutionStartedEventAttributes": {
+                        "input": (
+                            "{\n"
+                            '    "foo": {"spam": [42], "eggs": null},\n'
+                            '    "bar": null,\n'
+                            '    "yay": {"spam": [17], "eggs": [42]}\n'
+                            "}"
+                        )
+                    },
+                },
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 3, "eventType": "DecisionTaskStarted"},
+                {"eventId": 4, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 5,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "foo",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 4,
+                        "input": '{"spam": [42], "eggs": null}',
+                    },
+                },
+                {
+                    "eventId": 6,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
+                },
+                {
+                    "eventId": 7,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 5,
+                        "result": "3",
+                    },
+                },
+                {"eventId": 8, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 9, "eventType": "DecisionTaskStarted"},
+                {"eventId": 10, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 11,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "yay",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 10,
+                        "input": '{"spam": [17], "eggs": [42]}',
+                    },
+                },
+                {
+                    "eventId": 12,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "bar",
+                        "activityType": {"name": "spam-bar", "version": "0.1"},
+                        "decisionTaskCompletedEventId": 10,
+                        "input": "null",
+                    },
+                },
+                {
+                    "eventId": 13,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 11},
+                },
+                {
+                    "eventId": 14,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 12},
+                },
+                {
+                    "eventId": 15,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 11,
+                        "result": "5",
+                    },
+                },
+                {
+                    "eventId": 16,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 12,
+                        "result": '{"a": 9, "b": "red"}',
+                    },
+                },
+                {"eventId": 17, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 18, "eventType": "DecisionTaskStarted"},
+            ],
+        }
+        expected_decisions = [
+            {
+                "decisionType": "ScheduleActivityTask",
+                "scheduleActivityTaskDecisionAttributes": {
+                    "activityId": "tin",
+                    "activityType": {"name": "spam-tin", "version": "1.2"},
+                    "heartbeatTimeout": "30",
+                    "startToCloseTimeout": "43200",
+                },
+            },
+        ]
+        instance = seddy_specs.DAGBuilder(workflow, task)
+        instance.build_decisions()
+        assert instance.decisions == expected_decisions
 
-    @pytest.fixture
-    def expected_decisions(self, _task_and_expected_decisions):
-        """Example expected decisions."""
-        return _task_and_expected_decisions[1]
+    def test_foo_failed(self, workflow):
+        """Test DAG decisions building after foo activity fails."""
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 3,
+            "startedEventId": 9,
+            "events": [
+                {
+                    "eventId": 1,
+                    "eventType": "WorkflowExecutionStarted",
+                    "workflowExecutionStartedEventAttributes": {
+                        "input": (
+                            "{\n"
+                            '    "foo": {"spam": [42], "eggs": null},\n'
+                            '    "bar": null,\n'
+                            '    "yay": {"spam": [17], "eggs": [42]}\n'
+                            "}"
+                        )
+                    },
+                },
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 3, "eventType": "DecisionTaskStarted"},
+                {"eventId": 4, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 5,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "foo",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 4,
+                        "input": '{"spam": [42], "eggs": null}',
+                    },
+                },
+                {
+                    "eventId": 6,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
+                },
+                {
+                    "eventId": 7,
+                    "eventType": "ActivityTaskFailed",
+                    "activityTaskFailedEventAttributes": {
+                        "scheduledEventId": 5,
+                        "details": "The specified spam does not exist",
+                        "reason": "spamError",
+                    },
+                },
+                {"eventId": 8, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 9, "eventType": "DecisionTaskStarted"},
+            ],
+        }
+        expected_decisions = [
+            {
+                "decisionType": "FailWorkflowExecution",
+                "failWorkflowExecutionDecisionAttributes": {
+                    "reason": "activityFailure",
+                    "details": "Activity 'foo' failed",
+                },
+            }
+        ]
+        instance = seddy_specs.DAGBuilder(workflow, task)
+        instance.build_decisions()
+        assert instance.decisions == expected_decisions
 
-    @pytest.fixture
-    def instance(self, workflow, task):
-        """DAG decisions builder instance."""
-        return seddy_specs.DAGBuilder(workflow, task)
+    def test_foo_timed_out(self, workflow):
+        """Test DAG decisions building after foo activity times-out."""
+        # Events sections
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 3,
+            "startedEventId": 9,
+            "events": [
+                {
+                    "eventId": 1,
+                    "eventType": "WorkflowExecutionStarted",
+                    "workflowExecutionStartedEventAttributes": {
+                        "input": (
+                            "{\n"
+                            '    "foo": {"spam": [42], "eggs": null},\n'
+                            '    "bar": null,\n'
+                            '    "yay": {"spam": [17], "eggs": [42]}\n'
+                            "}"
+                        )
+                    },
+                },
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 3, "eventType": "DecisionTaskStarted"},
+                {"eventId": 4, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 5,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "foo",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 4,
+                        "input": '{"spam": [42], "eggs": null}',
+                    },
+                },
+                {
+                    "eventId": 6,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
+                },
+                {
+                    "eventId": 7,
+                    "eventType": "ActivityTaskTimedOut",
+                    "activityTaskTimedOutEventAttributes": {
+                        "scheduledEventId": 5,
+                        "details": "42 / 50",
+                        "timeoutType": "HEARTBEAT",
+                    },
+                },
+                {"eventId": 8, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 9, "eventType": "DecisionTaskStarted"},
+            ],
+        }
+        expected_decisions = [
+            {
+                "decisionType": "FailWorkflowExecution",
+                "failWorkflowExecutionDecisionAttributes": {
+                    "reason": "activityTimeOut",
+                    "details": "Activity 'foo' timed-out",
+                },
+            }
+        ]
+        instance = seddy_specs.DAGBuilder(workflow, task)
+        instance.build_decisions()
+        assert instance.decisions == expected_decisions
 
-    def test_build_decisions(self, instance, expected_decisions):
-        """Test DAG decisions building."""
+    def test_workflow_cancel(self, workflow):
+        """Test DAG decisions building after workflow is cancelled."""
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 3,
+            "startedEventId": 9,
+            "events": [
+                {
+                    "eventId": 1,
+                    "eventType": "WorkflowExecutionStarted",
+                    "workflowExecutionStartedEventAttributes": {
+                        "input": (
+                            "{\n"
+                            '    "foo": {"spam": [42], "eggs": null},\n'
+                            '    "bar": null,\n'
+                            '    "yay": {"spam": [17], "eggs": [42]}\n'
+                            "}"
+                        )
+                    },
+                },
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 3, "eventType": "DecisionTaskStarted"},
+                {"eventId": 4, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 5,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "foo",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 4,
+                        "input": '{"spam": [42], "eggs": null}',
+                    },
+                },
+                {
+                    "eventId": 6,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
+                },
+                {"eventId": 7, "eventType": "WorkflowExecutionCancelRequested"},
+                {"eventId": 8, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 9, "eventType": "DecisionTaskStarted"},
+            ],
+        }
+        expected_decisions = [
+            {
+                "decisionType": "RequestCancelActivityTask",
+                "requestCancelActivityTaskDecisionAttributes": {
+                    "activityId": "foo"
+                },
+            },
+            {"decisionType": "CancelWorkflowExecution"},
+        ]
+        instance = seddy_specs.DAGBuilder(workflow, task)
+        instance.build_decisions()
+        assert instance.decisions == expected_decisions
+
+    def test_workflow_cancel_after_bar_yay(self, workflow):
+        """Test DAG decisions building: workflow cancelled after bar and yay."""
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 9,
+            "startedEventId": 16,
+            "events": [
+                {
+                    "eventId": 1,
+                    "eventType": "WorkflowExecutionStarted",
+                    "workflowExecutionStartedEventAttributes": {
+                        "input": (
+                            "{\n"
+                            '    "foo": {"spam": [42], "eggs": null},\n'
+                            '    "bar": null,\n'
+                            '    "yay": {"spam": [17], "eggs": [42]}\n'
+                            "}"
+                        )
+                    },
+                },
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 3, "eventType": "DecisionTaskStarted"},
+                {"eventId": 4, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 5,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "foo",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 4,
+                        "input": '{"spam": [42], "eggs": null}',
+                    },
+                },
+                {
+                    "eventId": 6,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
+                },
+                {
+                    "eventId": 7,
+                    "eventType": "ActivityTaskCompleted",
+                    "activityTaskCompletedEventAttributes": {
+                        "scheduledEventId": 5,
+                        "result": "3",
+                    },
+                },
+                {"eventId": 8, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 9, "eventType": "DecisionTaskStarted"},
+                {"eventId": 10, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 11,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "yay",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 10,
+                        "input": '{"spam": [17], "eggs": [42]}',
+                    },
+                },
+                {
+                    "eventId": 12,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "bar",
+                        "activityType": {"name": "spam-bar", "version": "0.1"},
+                        "decisionTaskCompletedEventId": 10,
+                        "input": "null",
+                    },
+                },
+                {
+                    "eventId": 13,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 11},
+                },
+                {"eventId": 14, "eventType": "WorkflowExecutionCancelRequested"},
+                {"eventId": 15, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 16, "eventType": "DecisionTaskStarted"},
+            ],
+        }
+        expected_decisions = [
+            {
+                "decisionType": "RequestCancelActivityTask",
+                "requestCancelActivityTaskDecisionAttributes": {
+                    "activityId": "bar"
+                },
+            },
+            {
+                "decisionType": "RequestCancelActivityTask",
+                "requestCancelActivityTaskDecisionAttributes": {
+                    "activityId": "yay"
+                },
+            },
+            {"decisionType": "CancelWorkflowExecution"},
+        ]
+        instance = seddy_specs.DAGBuilder(workflow, task)
         instance.build_decisions()
         assert instance.decisions == expected_decisions
 
     @pytest.mark.parametrize(
         ("cause", "identity", "event_type", "exp"),
         [
-            pytest.param(
-                "OPERATION_NOT_PERMITTED",
-                "spam-1234",
-                "ScheduleActivityTaskFailed",
-                seddy_specs._base.DeciderError("Not permitted"),
-                id="permissions-this",
-            ),
             pytest.param(
                 "OPERATION_NOT_PERMITTED",
                 "spam-1235",
@@ -646,13 +1053,6 @@ class TestDAGBuilder:
                     }
                 ],
                 id="permissions-other",
-            ),
-            pytest.param(
-                "INVALID_INPUT",
-                "spam-1234",
-                "CancelWorkflowExecutionFailed",
-                seddy_specs._base.DeciderError(),
-                id="error",
             ),
             pytest.param(
                 "UNHANDLED_DECISION",
@@ -721,13 +1121,58 @@ class TestDAGBuilder:
         instance = seddy_specs.DAGBuilder(workflow, task)
 
         # Run function
-        if isinstance(exp, Exception):
-            with pytest.raises(exp.__class__) as e:
-                instance.build_decisions()
-            assert str(e.value) == str(exp)
-        else:
+        instance.build_decisions()
+        assert instance.decisions == exp
+
+    @pytest.mark.parametrize(
+        ("cause", "exception_str"),
+        [
+            pytest.param("OPERATION_NOT_PERMITTED", "Not permitted", id="permissions"),
+            pytest.param("INVALID_INPUT", "", id="error"),
+        ],
+    )
+    def test_decision_failure_raises(self, workflow, cause, exception_str):
+        """Test decision failure handling raises on configuration issue."""
+        # Build input
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 3,
+            "startedEventId": 7,
+            "events": [
+                {"eventId": 1, "eventType": "WorkflowExecutionStarted"},
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {
+                    "eventId": 3,
+                    "eventType": "DecisionTaskStarted",
+                    "decisionTaskStartedEventAttributes": {"identity": "spam-1234"},
+                },
+                {
+                    "eventId": 4,
+                    "eventType": "DecisionTaskCompleted",
+                    "decisionTaskCompletedEventAttributes": {"startedEventId": 3},
+                },
+                {
+                    "eventId": 5,
+                    "eventType": "CancelWorkflowExecutionFailed",
+                    "cancelWorkflowExecutionFailedEventAttributes": {
+                        "cause": cause,
+                        "DecisionTaskCompletedEventId": 4,
+                    },
+                },
+                {"eventId": 6, "eventType": "DecisionTaskScheduled"},
+                {
+                    "eventId": 7,
+                    "eventType": "DecisionTaskStarted",
+                    "decisionTaskStartedEventAttributes": {"identity": "spam-1234"},
+                },
+            ],
+        }
+        instance = seddy_specs.DAGBuilder(workflow, task)
+
+        # Run function
+        with pytest.raises(seddy_specs._base.DeciderError) as e:
             instance.build_decisions()
-            assert instance.decisions == exp
+        assert str(e.value) == exception_str
 
 
 class TestWorkflow:

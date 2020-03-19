@@ -207,7 +207,14 @@ class DAGBuilder(_base.DecisionsBuilder):
         if self.task["previousStartedEventId"] in event_ids:
             previous_idx = event_ids.index(self.task["previousStartedEventId"])
         events = self.task["events"][previous_idx + 1 : current_idx + 1]
-        logger.debug("Processing %d events from event %d", len(events), current_idx)
+        logger.debug(
+            "Processing %d events from index %d (ID: %s) to %d (ID: %s)",
+            len(events),
+            previous_idx + 1,
+            events[0]["eventId"],
+            current_idx,
+            events[-1]["eventId"],
+        )
 
         # Process events
         assert self.task["events"][-1]["eventType"] == "DecisionTaskStarted"
