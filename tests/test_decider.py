@@ -121,7 +121,7 @@ class TestDecider:
             "workflowType": {"name": "bar", "version": "0.42"},
         }
 
-    def test_make_decisions(self, instance, workflow_mocks):
+    def test_get_workflow(self, instance, workflow_mocks):
         # Setup environment
         load_mock = mock.Mock(return_value=workflow_mocks)
         load_patch = mock.patch.object(seddy_specs, "load_workflows", load_mock)
@@ -170,13 +170,13 @@ class TestDecider:
 
         # Run function
         with load_patch:
-            res = instance._make_decisions(task)
+            res = instance._get_workflow(task)
 
         # Check result
-        assert res is workflow_mocks[1].make_decisions.return_value
+        assert res is workflow_mocks[1]
 
-    def test_make_decisions_unsupported(self, instance, workflow_mocks):
-        """Check decision-making raises for unsupported workflows."""
+    def test_get_workflow_unsupported(self, instance, workflow_mocks):
+        """Check workflow-get raises for unsupported workflows."""
         # Setup environment
         load_mock = mock.Mock(return_value=workflow_mocks)
         load_patch = mock.patch.object(seddy_specs, "load_workflows", load_mock)
@@ -192,7 +192,7 @@ class TestDecider:
         # Run function
         with pytest.raises(seddy_decider.UnsupportedWorkflow) as e:
             with load_patch:
-                instance._make_decisions(task)
+                instance._get_workflow(task)
 
         # Check result
         assert e.value.args[0] == {"name": "bar", "version": "0.43"}
@@ -258,10 +258,12 @@ class TestDecider:
 
         class Decider(seddy_decider.Decider):
             _poll_for_decision_task = mock.Mock(return_value=task)
-            _make_decisions = mock.Mock(
-                return_value=[{"decisionType": "CompleteWorkflowExecution"}]
-            )
+            _get_workflow = mock.Mock(return_value=workflow_mocks[1])
             _respond_decision_task_completed = mock.Mock()
+
+        workflow_mocks[1].make_decisions.return_value = [
+            {"decisionType": "CompleteWorkflowExecution"}
+        ]
 
         instance = Decider(workflow_mocks, "spam", "eggs")
 
@@ -270,7 +272,7 @@ class TestDecider:
 
         # Check calls
         instance._poll_for_decision_task.assert_called_once_with()
-        instance._make_decisions.assert_called_once_with(task)
+        instance._get_workflow.assert_called_once_with(task)
         instance._respond_decision_task_completed.assert_called_once_with(
             [{"decisionType": "CompleteWorkflowExecution"}], task
         )
@@ -279,7 +281,7 @@ class TestDecider:
         # Setup environment
         class Decider(seddy_decider.Decider):
             _poll_for_decision_task = mock.Mock(return_value={"taskToken": ""})
-            _make_decisions = mock.Mock()
+            _get_workflow = mock.Mock()
             _respond_decision_task_completed = mock.Mock()
 
         instance = Decider(workflow_mocks, "spam", "eggs")
@@ -289,7 +291,7 @@ class TestDecider:
 
         # Check calls
         instance._poll_for_decision_task.assert_called_once_with()
-        instance._make_decisions.assert_not_called()
+        instance._get_workflow.assert_not_called()
         instance._respond_decision_task_completed.assert_not_called()
 
     def test_poll_and_run_unsupported(self, workflow_mocks, aws_environment):
@@ -303,7 +305,7 @@ class TestDecider:
 
         class Decider(seddy_decider.Decider):
             _poll_for_decision_task = mock.Mock(return_value=task)
-            _make_decisions = mock.Mock(
+            _get_workflow = mock.Mock(
                 side_effect=seddy_decider.UnsupportedWorkflow(task["workflowType"])
             )
             _respond_decision_task_completed = mock.Mock()
@@ -317,7 +319,7 @@ class TestDecider:
 
         # Check calls
         instance._poll_for_decision_task.assert_called_once_with()
-        instance._make_decisions.assert_called_once_with(task)
+        instance._get_workflow.assert_called_once_with(task)
         instance._respond_decision_task_completed.assert_not_called()
 
     def test_run_uncaught(self, workflow_mocks, aws_environment):

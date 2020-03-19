@@ -65,14 +65,14 @@ class Decider:
             self.client.poll_for_decision_task, "events", _kwargs
         )
 
-    def _make_decisions(self, task: t.Dict[str, t.Any]) -> t.List[t.Dict[str, t.Any]]:
-        """Build decisions from workflow history.
+    def _get_workflow(self, task: t.Dict[str, t.Any]) -> _specs.Workflow:
+        """Get workflow specification for task.
 
         Args:
             task: decision task
 
         Returns:
-            workflow decisions
+            workflow specification
         """
 
         workflows = _specs.load_workflows(self.workflows_spec_file)
@@ -82,9 +82,7 @@ class Decider:
             idx = workflow_ids.index(task_id)
         except ValueError:
             raise UnsupportedWorkflow(task["workflowType"]) from None
-        workflow = workflows[idx]
-        workflow.setup()
-        return workflow.make_decisions(task)
+        return workflows[idx]
 
     def _respond_decision_task_completed(
         self, decisions: t.List[t.Dict[str, t.Any]], task: t.Dict[str, t.Any]
@@ -126,10 +124,12 @@ class Decider:
             task["workflowExecution"]["runId"],
         )
         try:
-            decisions = self._make_decisions(task)
+            workflow = self._get_workflow(task)
         except UnsupportedWorkflow:
             logger.error("Unsupported workflow type: %s" % task["workflowType"])
             raise
+        workflow.setup()
+        decisions = workflow.make_decisions(task)
         self._respond_decision_task_completed(decisions, task)
 
     def _run_uncaught(self):
