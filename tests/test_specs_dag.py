@@ -623,6 +623,112 @@ class TestDAGBuilder:
         instance.build_decisions()
         assert instance.decisions == expected_decisions
 
+    @pytest.mark.parametrize(
+        ("cause", "identity", "event_type", "exp"),
+        [
+            pytest.param(
+                "OPERATION_NOT_PERMITTED",
+                "spam-1234",
+                "ScheduleActivityTaskFailed",
+                seddy_specs._base.DeciderError("Not permitted"),
+                id="permissions-this",
+            ),
+            pytest.param(
+                "OPERATION_NOT_PERMITTED",
+                "spam-1235",
+                "ScheduleActivityTaskFailed",
+                [
+                    {
+                        "decisionType": "FailWorkflowExecution",
+                        "failWorkflowExecutionDecisionAttributes": {
+                            "reason": "DeciderError",
+                        },
+                    }
+                ],
+                id="permissions-other",
+            ),
+            pytest.param(
+                "INVALID_INPUT",
+                "spam-1234",
+                "CancelWorkflowExecutionFailed",
+                seddy_specs._base.DeciderError(),
+                id="error",
+            ),
+            pytest.param(
+                "UNHANDLED_DECISION",
+                "spam-1234",
+                "CancelWorkflowExecutionFailed",
+                [{"decisionType": "CancelWorkflowExecution"}],
+                id="unhandled-cancel",
+            ),
+            pytest.param(
+                "UNHANDLED_DECISION",
+                "spam-1234",
+                "FailWorkflowExecutionFailed",
+                [
+                    {
+                        "decisionType": "FailWorkflowExecution",
+                        "failWorkflowExecutionDecisionAttributes": {
+                            "reason": "FailRetry",
+                        },
+                    }
+                ],
+                id="unhandled-fail",
+            ),
+            pytest.param(
+                "UNHANDLED_DECISION",
+                "spam-1234",
+                "CompleteWorkflowExecutionFailed",
+                [],
+                id="unhandled-complete",
+            ),
+        ],
+    )
+    def test_decision_failure(self, workflow, cause, identity, event_type, exp):
+        """Test decision failure handling."""
+        # Build input
+        event_attr_key = event_type[0].lower() + event_type[1:] + "EventAttributes"
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 3,
+            "startedEventId": 7,
+            "events": [
+                {"eventId": 1, "eventType": "WorkflowExecutionStarted"},
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {
+                    "eventId": 3,
+                    "eventType": "DecisionTaskStarted",
+                    "decisionTaskStartedEventAttributes": {"identity": "spam-1234"},
+                },
+                {
+                    "eventId": 4,
+                    "eventType": "DecisionTaskCompleted",
+                    "decisionTaskCompletedEventAttributes": {"startedEventId": 3},
+                },
+                {
+                    "eventId": 5,
+                    "eventType": event_type,
+                    event_attr_key: {"cause": cause, "DecisionTaskCompletedEventId": 4},
+                },
+                {"eventId": 6, "eventType": "DecisionTaskScheduled"},
+                {
+                    "eventId": 7,
+                    "eventType": "DecisionTaskStarted",
+                    "decisionTaskStartedEventAttributes": {"identity": identity},
+                },
+            ],
+        }
+        instance = seddy_specs.DAGBuilder(workflow, task)
+
+        # Run function
+        if isinstance(exp, Exception):
+            with pytest.raises(exp.__class__) as e:
+                instance.build_decisions()
+            assert str(e.value) == str(exp)
+        else:
+            instance.build_decisions()
+            assert instance.decisions == exp
+
 
 class TestWorkflow:
     """Test ``seddy._specs.DAGWorkflow``."""

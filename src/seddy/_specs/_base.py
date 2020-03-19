@@ -5,6 +5,10 @@ import enum
 import typing as t
 
 
+class DeciderError(RuntimeError):
+    """Misconfiguration of the decider."""
+
+
 class ChildPolicy(enum.Enum):
     """Policy for child executions on parent termination.
 
