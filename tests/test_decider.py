@@ -311,7 +311,9 @@ class TestDecider:
         instance = Decider(workflow_mocks, "spam", "eggs")
 
         # Run function
-        instance._poll_and_run()
+        with pytest.raises(seddy_decider.UnsupportedWorkflow) as e:
+            instance._poll_and_run()
+        assert e.value.args[0] == task["workflowType"]
 
         # Check calls
         instance._poll_for_decision_task.assert_called_once_with()

@@ -129,7 +129,7 @@ class Decider:
             decisions = self._make_decisions(task)
         except UnsupportedWorkflow:
             logger.error("Unsupported workflow type: %s" % task["workflowType"])
-            return
+            raise
         self._respond_decision_task_completed(decisions, task)
 
     def _run_uncaught(self):
