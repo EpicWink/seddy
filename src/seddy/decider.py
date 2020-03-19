@@ -129,8 +129,16 @@ class Decider:
             logger.error("Unsupported workflow type: %s" % task["workflowType"])
             raise
         workflow.setup()
-        decisions = workflow.make_decisions(task)
+
+        exc = None
+        try:
+            decisions = workflow.make_decisions(task)
+        except Exception as e:
+            decisions = _specs.make_decisions_on_error(e)
+            exc = e
         self._respond_decision_task_completed(decisions, task)
+        if exc:
+            raise exc
 
     def _run_uncaught(self):
         """Run decider."""

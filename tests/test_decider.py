@@ -322,6 +322,45 @@ class TestDecider:
         instance._get_workflow.assert_called_once_with(task)
         instance._respond_decision_task_completed.assert_not_called()
 
+    def test_poll_and_run_decider_error(self, workflow_mocks, aws_environment):
+        """Decision-building raises."""
+        # Setup environment
+        task = {
+            "taskToken": "spam",
+            "workflowType": {"name": "bar", "version": "0.42"},
+            "workflowExecution": {"workflowId": "1234", "runId": "9abc"},
+        }
+
+        class Decider(seddy_decider.Decider):
+            _poll_for_decision_task = mock.Mock(return_value=task)
+            _get_workflow = mock.Mock(return_value=workflow_mocks[1])
+            _respond_decision_task_completed = mock.Mock()
+
+        workflow_mocks[1].make_decisions.side_effect = RuntimeError("malformed specs")
+
+        instance = Decider(workflow_mocks, "spam", "eggs")
+
+        # Build expectation
+        exp_decision = {
+            "decisionType": "FailWorkflowExecution",
+            "failWorkflowExecutionDecisionAttributes": {
+                "reason": "RuntimeError",
+                "details": "malformed specs",
+            },
+        }
+
+        # Run function
+        with pytest.raises(RuntimeError) as e:
+            instance._poll_and_run()
+        assert str(e.value) == "malformed specs"
+
+        # Check calls
+        instance._poll_for_decision_task.assert_called_once_with()
+        instance._get_workflow.assert_called_once_with(task)
+        instance._respond_decision_task_completed.assert_called_once_with(
+            [exp_decision], task
+        )
+
     def test_run_uncaught(self, workflow_mocks, aws_environment):
         # Setup environment
         class Decider(seddy_decider.Decider):

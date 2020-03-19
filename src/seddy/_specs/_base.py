@@ -182,3 +182,24 @@ class Workflow(metaclass=abc.ABCMeta):
         builder = self.decisions_builder(self, task)
         builder.build_decisions()
         return builder.decisions
+
+
+def make_decisions_on_error(exception: Exception) -> t.List[t.Dict[str, t.Any]]:
+    """Build workflow-fail decision on decider exception.
+
+    Args:
+        exception: decider exception being handled
+
+    Returns:
+        workflow-fail decision
+    """
+
+    decision_attrs = {"reason": exception.__class__.__name__}
+    message = str(exception)
+    if message:
+        decision_attrs["details"] = message
+    decision = {
+        "decisionType": "FailWorkflowExecution",
+        "failWorkflowExecutionDecisionAttributes": decision_attrs,
+    }
+    return [decision]
