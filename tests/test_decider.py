@@ -3,6 +3,7 @@
 import os
 import socket
 from unittest import mock
+from concurrent import futures as cf
 
 from seddy import decider as seddy_decider
 from seddy import _specs as seddy_specs
@@ -289,12 +290,31 @@ class TestDecider:
             _run_uncaught = mock.Mock(side_effect=KeyboardInterrupt)
 
         instance = Decider(workflow_mocks, "spam", "eggs")
+        instance._future = mock.Mock(spec=cf.Future)
+        instance._future.running.return_value = False
 
         # Run function
         instance.run()
 
         # Check calls
         instance._run_uncaught.assert_called_once_with()
+        instance._future.result.assert_not_called()
+
+    def test_run_handling_decision(self, workflow_mocks, aws_environment):
+        # Setup environment
+        class Decider(seddy_decider.Decider):
+            _run_uncaught = mock.Mock(side_effect=KeyboardInterrupt)
+
+        instance = Decider(workflow_mocks, "spam", "eggs")
+        instance._future = mock.Mock(spec=cf.Future)
+        instance._future.running.return_value = True
+
+        # Run function
+        instance.run()
+
+        # Check calls
+        instance._run_uncaught.assert_called_once_with()
+        instance._future.result.assert_called_once_with()
 
 
 def test_run_app(tmp_path):

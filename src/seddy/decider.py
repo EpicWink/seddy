@@ -5,6 +5,7 @@ import socket
 import pathlib
 import typing as t
 import logging as lg
+from concurrent import futures as cf
 
 from . import _util
 from . import _specs
@@ -40,6 +41,7 @@ class Decider:
         self.task_list = task_list
         self.client = _util.get_swf_client()
         self.identity = identity or (socket.getfqdn() + "-" + str(uuid.uuid4())[:8])
+        self._future = None
 
     def _poll_for_decision_task(self) -> t.Dict[str, t.Any]:
         """Poll for a decision task from SWF.
@@ -102,6 +104,12 @@ class Decider:
         logger.debug("Decision task: %s", task)
         if not task["taskToken"]:
             return
+        executor = cf.ThreadPoolExecutor(max_workers=1)
+        self._future = executor.submit(self._decide_and_respond, task)
+        self._future.result()
+
+    def _decide_and_respond(self, task):
+        """Make and respond with decisions."""
         logger.info(
             "Got decision task '%s' for workflow '%s-%s' execution '%s' (run '%s')",
             task["taskToken"],
@@ -126,6 +134,9 @@ class Decider:
             self._run_uncaught()
         except KeyboardInterrupt:
             logger.info("Quitting due to keyboard-interrupt")
+        if self._future.running():
+            logger.log(25, "Waiting on current decision task to be handled")
+            self._future.result()
 
 
 def run_app(
