@@ -1174,6 +1174,57 @@ class TestDAGDecisionsBuilding:
             instance.build_decisions()
         assert str(e.value) == exception_str
 
+    def test_workflow_complete_decision_failure(self):
+        """Test workflow-complete decision failure handling."""
+        # Build input
+        workflow = seddy_specs.DAGWorkflow.from_spec(
+            {
+                "name": "foo",
+                "version": "0.44",
+                "tasks": [],
+                "type": "dag",
+            }
+        )
+        workflow.setup()
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 3,
+            "startedEventId": 7,
+            "events": [
+                {"eventId": 1, "eventType": "WorkflowExecutionStarted"},
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {
+                    "eventId": 3,
+                    "eventType": "DecisionTaskStarted",
+                    "decisionTaskStartedEventAttributes": {"identity": "spam-1234"},
+                },
+                {
+                    "eventId": 4,
+                    "eventType": "DecisionTaskCompleted",
+                    "decisionTaskCompletedEventAttributes": {"startedEventId": 3},
+                },
+                {
+                    "eventId": 5,
+                    "eventType": "CompleteWorkflowExecutionFailed",
+                    "completeWorkflowExecutionFailedEventAttributes": {
+                        "cause": "UNHANDLED_DECISION",
+                        "DecisionTaskCompletedEventId": 4,
+                    },
+                },
+                {"eventId": 6, "eventType": "DecisionTaskScheduled"},
+                {
+                    "eventId": 7,
+                    "eventType": "DecisionTaskStarted",
+                    "decisionTaskStartedEventAttributes": {"identity": "spam-1234"},
+                },
+            ],
+        }
+        instance = seddy_specs.DAGBuilder(workflow, task)
+
+        # Run function
+        instance.build_decisions()
+        assert instance.decisions == [{"decisionType": "CompleteWorkflowExecution"}]
+
 
 class TestWorkflow:
     """Test ``seddy._specs.DAGWorkflow``."""
