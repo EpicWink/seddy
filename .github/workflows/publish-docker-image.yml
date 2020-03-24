@@ -18,7 +18,7 @@ jobs:
         echo ${{ secrets.DOCKERHUB_PASSWORD }}
         | docker login --password-stdin -u epicwink
     - name: Publish image
-      run: docker push seddy:${{ steps.get-tag.outputs.tag }}
+      run: docker push epicwink/seddy:${{ steps.get-tag.outputs.tag }}
     - name: Check tag
       id: check-tag
       run: |
@@ -28,5 +28,5 @@ jobs:
     - name: Publish latest image
       if: steps.check-tag.outputs.match == 'true'
       run: |
-        docker tag seddy:${{ steps.get-tag.outputs.tag }} seddy:latest
-        docker push seddy:latest
+        docker tag epicwink/seddy:${{ steps.get-tag.outputs.tag }} epicwink/seddy:latest
+        docker push epicwink/seddy:latest
