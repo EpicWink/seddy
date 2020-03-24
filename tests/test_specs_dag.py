@@ -127,7 +127,7 @@ class TestDAGDecisionsBuilding:
                 },
                 {"eventId": 6, "eventType": "DecisionTaskScheduled"},
                 {"eventId": 7, "eventType": "DecisionTaskStarted"},
-            ]
+            ],
         }
         instance = seddy_specs.DAGBuilder(workflow, task)
         instance.build_decisions()
@@ -181,7 +181,7 @@ class TestDAGDecisionsBuilding:
                 },
                 {"eventId": 8, "eventType": "DecisionTaskScheduled"},
                 {"eventId": 9, "eventType": "DecisionTaskStarted"},
-            ]
+            ],
         }
         expected_decisions = [
             {
@@ -1049,9 +1049,7 @@ class TestDAGDecisionsBuilding:
         expected_decisions = [
             {
                 "decisionType": "RequestCancelActivityTask",
-                "requestCancelActivityTaskDecisionAttributes": {
-                    "activityId": "foo"
-                },
+                "requestCancelActivityTaskDecisionAttributes": {"activityId": "foo"},
             },
             {"decisionType": "CancelWorkflowExecution"},
         ]
@@ -1141,15 +1139,11 @@ class TestDAGDecisionsBuilding:
         expected_decisions = [
             {
                 "decisionType": "RequestCancelActivityTask",
-                "requestCancelActivityTaskDecisionAttributes": {
-                    "activityId": "bar"
-                },
+                "requestCancelActivityTaskDecisionAttributes": {"activityId": "bar"},
             },
             {
                 "decisionType": "RequestCancelActivityTask",
-                "requestCancelActivityTaskDecisionAttributes": {
-                    "activityId": "yay"
-                },
+                "requestCancelActivityTaskDecisionAttributes": {"activityId": "yay"},
             },
             {"decisionType": "CancelWorkflowExecution"},
         ]
@@ -1298,12 +1292,7 @@ class TestDAGDecisionsBuilding:
         """Test workflow-complete decision failure handling."""
         # Build input
         workflow = seddy_specs.DAGWorkflow.from_spec(
-            {
-                "name": "foo",
-                "version": "0.44",
-                "tasks": [],
-                "type": "dag",
-            }
+            {"name": "foo", "version": "0.44", "tasks": [], "type": "dag"}
         )
         workflow.setup()
         task = {
