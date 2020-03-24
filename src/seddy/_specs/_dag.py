@@ -210,6 +210,13 @@ class DAGBuilder(_base.DecisionsBuilder):
             self._schedule_initial_activity_tasks()
         elif event["eventType"] in _decision_failed_attr_keys:
             return self._process_decision_failed(event)
+        elif event["eventType"] in (
+            "ChildWorkflowExecutionTimedOut",
+            "DecisionTaskTimedOut",
+            "WorkflowExecutionTimedOut",
+        ):
+            self._fail_workflow("timeOut")
+            return True
         return False
 
     def _process_new_events(self):
