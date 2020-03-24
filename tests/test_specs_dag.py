@@ -944,8 +944,8 @@ class TestDAGDecisionsBuilding:
         instance.build_decisions()
         assert instance.decisions == expected_decisions
 
-    def test_workflow_timed_out(self, workflow):
-        """Test DAG decisions building after foo activity start times-out."""
+    def test_decision_timed_out(self, workflow):
+        """Test DAG decisions building after decision task times-out."""
         # Events sections
         task = {
             "taskToken": "spam",
@@ -983,11 +983,11 @@ class TestDAGDecisionsBuilding:
                     "eventType": "ActivityTaskStarted",
                     "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
                 },
+                {"eventId": 7, "eventType": "DecisionTaskScheduled"},
                 {
-                    "eventId": 7,
-                    "eventType": "WorkflowExecutionTimedOut",
+                    "eventId": 8,
+                    "eventType": "DecisionTaskTimedOut",
                     "workflowExecutionTimedOutTimedOutEventAttributes": {
-                        "childPolicy": "ABANDON",
                         "timeoutType": "START_TO_CLOSE",
                     },
                 },

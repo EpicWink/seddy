@@ -75,12 +75,7 @@ _error_events = {
     "RequestCancelActivityTaskFailed",
     "ScheduleActivityTaskFailed",
     "StartTimerFailed",
-    "TimerCanceled",
-    "TimerFired",
     "WorkflowExecutionCancelRequested",
-    "WorkflowExecutionFailed",
-    "WorkflowExecutionTerminated",
-    "WorkflowExecutionTimedOut",
 }
 _activity_events = {
     "ActivityTaskCompleted",
@@ -248,6 +243,8 @@ class DAGBuilder(_base.DecisionsBuilder):
             self._ready_activities.add(task_id)
 
     def _process_error_events(self):
+        if not self._error_events:
+            return False
         activity_events = []
         decider_events = []
         time_out_events = []
@@ -263,16 +260,18 @@ class DAGBuilder(_base.DecisionsBuilder):
                     time_out_events.append(event)
             elif event["eventType"] == "WorkflowExecutionCancelRequested":
                 self.decisions = [{"decisionType": "CancelWorkflowExecution"}]
-                return
+                return True
             elif event["eventType"] in _decision_failed_events:
                 if self._process_decision_failed(event):
-                    return
+                    return True
                 decider_events.append(event)
             elif event["eventType"] in (
                 "DecisionTaskTimedOut",
                 "WorkflowExecutionTimedOut",
             ):
                 time_out_events.append(event)
+            elif event["eventType"] == "RecordMarkerFailed":
+                other_events.append(event)
 
         details = []
         if activity_events:
@@ -285,6 +284,7 @@ class DAGBuilder(_base.DecisionsBuilder):
             details.append("%d other actions failed" % len(other_events))
         details = ", ".join(details)
         self._fail_workflow(details=details)
+        return True
 
     def _process_event(self, event: t.Dict[str, t.Any]):
         if event["eventType"] == "ActivityTaskCompleted":
@@ -322,8 +322,7 @@ class DAGBuilder(_base.DecisionsBuilder):
         for event in self._new_events[:-2]:
             if event["eventType"] in _error_events:
                 self._error_events.append(event)
-        if self._error_events:
-            self._process_error_events()
+        if self._process_error_events():
             return
 
         for event in self._new_events[:-2]:
