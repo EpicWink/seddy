@@ -207,7 +207,7 @@ class TestDAGDecisionsBuilding:
         ]
         instance = seddy_specs.DAGBuilder(workflow, task)
         instance.build_decisions()
-        assert instance.decisions == expected_decisions
+        assert instance.decisions in (expected_decisions, expected_decisions[::-1])
 
     def test_foo_complete_yay_unsatisfied(self, workflow):
         """Test DAG decisions building after foo completes yet yay not ready."""
@@ -1378,7 +1378,7 @@ class TestWorkflow:
         assert instance.task_specs is task_specs
         assert instance.spec_type == "dag"
         assert instance.decisions_builder is seddy_specs.DAGBuilder
-        assert not instance.dependants
+        assert instance.dependants == {None: []}
 
     def test_from_spec(self, spec, task_specs):
         """Test construction from specification."""
@@ -1392,4 +1392,9 @@ class TestWorkflow:
     def test_setup(self, instance):
         """Test DAG-type workflow specification pre-computation."""
         instance.setup()
-        assert instance.dependants == {"foo": ["bar", "yay"], "bar": [], "yay": []}
+        assert instance.dependants == {
+            None: ["foo"],
+            "foo": ["bar", "yay"],
+            "bar": [],
+            "yay": [],
+        }

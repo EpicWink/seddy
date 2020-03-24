@@ -118,6 +118,7 @@ class DAGBuilder(_base.DecisionsBuilder):
         self._activity_task_events = {at["id"]: [] for at in workflow.task_specs}
         self._new_events = None
         self._error_events = []
+        self._ready_activities = set()
 
     def _schedule_task(self, activity_task: t.Dict[str, t.Any]):
         workflow_started_event = self.task["events"][0]
@@ -180,7 +181,7 @@ class DAGBuilder(_base.DecisionsBuilder):
                     dependencies_satisfied = False
                     break
             if dependencies_satisfied:
-                self._schedule_task(activity_task)
+                self._ready_activities.add(activity_task["id"])
 
     def _complete_workflow(self):
         tasks_complete = True
@@ -243,10 +244,8 @@ class DAGBuilder(_base.DecisionsBuilder):
             return True
 
     def _schedule_initial_activity_tasks(self):
-        for activity_task in self.workflow.task_specs:
-            assert not self._activity_task_events[activity_task["id"]]
-            if not activity_task.get("dependencies"):
-                self._schedule_task(activity_task)
+        for task_id in self.workflow.dependants[None]:
+            self._ready_activities.add(task_id)
 
     def _process_error_events(self):
         activity_events = []
@@ -310,6 +309,12 @@ class DAGBuilder(_base.DecisionsBuilder):
         )
         self._new_events = events
 
+    def _schedule_tasks(self):
+        for task_id in self._ready_activities:
+            task = next(ts for ts in self.workflow.task_specs if ts["id"] == task_id)
+            assert not self._activity_task_events[task["id"]]
+            self._schedule_task(task)
+
     def _process_new_events(self):
         assert self.task["events"][-1]["eventType"] == "DecisionTaskStarted"
         assert self.task["events"][-2]["eventType"] == "DecisionTaskScheduled"
@@ -323,6 +328,7 @@ class DAGBuilder(_base.DecisionsBuilder):
 
         for event in self._new_events[:-2]:
             self._process_event(event)
+        self._schedule_tasks()
         self._complete_workflow()
 
     def build_decisions(self):
@@ -349,7 +355,7 @@ class DAGWorkflow(_base.Workflow):
     ):
         super().__init__(name, version, description)
         self.task_specs = task_specs
-        self.dependants = {}
+        self.dependants = {None: []}
 
     @classmethod
     def _args_from_spec(cls, spec):
@@ -364,6 +370,8 @@ class DAGWorkflow(_base.Workflow):
                 if activity_task["id"] in other_activity_task.get("dependencies", []):
                     dependants_task.append(other_activity_task["id"])
             self.dependants[activity_task["id"]] = dependants_task
+            if not activity_task.get("dependencies", []):
+                self.dependants[None].append(activity_task["id"])
 
     def setup(self):
         self._build_dependants()
