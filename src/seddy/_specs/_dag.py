@@ -199,6 +199,24 @@ class DAGBuilder(_base.DecisionsBuilder):
             if not activity_task.get("dependencies"):
                 self._schedule_task(activity_task)
 
+    def _process_event(self, event: t.Dict[str, t.Any]) -> bool:
+        if event["eventType"] == "ActivityTaskCompleted":
+            self._process_activity_task_completed_event(event)
+        elif event["eventType"] == "ActivityTaskFailed":
+            self._process_activity_task_failed_event(event)
+            return True
+        elif event["eventType"] == "ActivityTaskTimedOut":
+            self._process_activity_task_timed_out_event(event)
+            return True
+        elif event["eventType"] == "WorkflowExecutionCancelRequested":
+            self._process_cancel_requested_event()
+            return True
+        elif event["eventType"] == "WorkflowExecutionStarted":
+            self._schedule_initial_activity_tasks()
+        elif event["eventType"] in _decision_failed_attr_keys:
+            return self._process_decision_failed(event)
+        return False
+
     def _process_new_events(self):
         # Get new events
         event_ids = [event["eventId"] for event in self.task["events"]]
@@ -220,22 +238,8 @@ class DAGBuilder(_base.DecisionsBuilder):
         assert self.task["events"][-1]["eventType"] == "DecisionTaskStarted"
         assert self.task["events"][-2]["eventType"] == "DecisionTaskScheduled"
         for event in events[:-2]:
-            if event["eventType"] == "ActivityTaskCompleted":
-                self._process_activity_task_completed_event(event)
-            elif event["eventType"] == "ActivityTaskFailed":
-                self._process_activity_task_failed_event(event)
+            if self._process_event(event):
                 break
-            elif event["eventType"] == "ActivityTaskTimedOut":
-                self._process_activity_task_timed_out_event(event)
-                break
-            elif event["eventType"] == "WorkflowExecutionCancelRequested":
-                self._process_cancel_requested_event()
-                break
-            elif event["eventType"] == "WorkflowExecutionStarted":
-                self._schedule_initial_activity_tasks()
-            elif event["eventType"] in _decision_failed_attr_keys:
-                if self._process_decision_failed(event):
-                    break
         else:
             self._complete_workflow()
 
