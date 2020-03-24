@@ -809,7 +809,7 @@ class TestDAGDecisionsBuilding:
             {
                 "decisionType": "FailWorkflowExecution",
                 "failWorkflowExecutionDecisionAttributes": {
-                    "reason": "activityFailure",
+                    "details": "1 activities failed",
                 },
             }
         ]
@@ -873,7 +873,7 @@ class TestDAGDecisionsBuilding:
             {
                 "decisionType": "FailWorkflowExecution",
                 "failWorkflowExecutionDecisionAttributes": {
-                    "reason": "activityFailure",
+                    "details": "1 activities failed",
                 },
             }
         ]
@@ -935,7 +935,9 @@ class TestDAGDecisionsBuilding:
         expected_decisions = [
             {
                 "decisionType": "FailWorkflowExecution",
-                "failWorkflowExecutionDecisionAttributes": {"reason": "timeOut"},
+                "failWorkflowExecutionDecisionAttributes": {
+                    "details": "1 actions timed-out",
+                },
             }
         ]
         instance = seddy_specs.DAGBuilder(workflow, task)
@@ -996,7 +998,9 @@ class TestDAGDecisionsBuilding:
         expected_decisions = [
             {
                 "decisionType": "FailWorkflowExecution",
-                "failWorkflowExecutionDecisionAttributes": {"reason": "timeOut"},
+                "failWorkflowExecutionDecisionAttributes": {
+                    "details": "1 actions timed-out",
+                },
             }
         ]
         instance = seddy_specs.DAGBuilder(workflow, task)
@@ -1046,13 +1050,7 @@ class TestDAGDecisionsBuilding:
                 {"eventId": 9, "eventType": "DecisionTaskStarted"},
             ],
         }
-        expected_decisions = [
-            {
-                "decisionType": "RequestCancelActivityTask",
-                "requestCancelActivityTaskDecisionAttributes": {"activityId": "foo"},
-            },
-            {"decisionType": "CancelWorkflowExecution"},
-        ]
+        expected_decisions = [{"decisionType": "CancelWorkflowExecution"}]
         instance = seddy_specs.DAGBuilder(workflow, task)
         instance.build_decisions()
         assert instance.decisions == expected_decisions
@@ -1136,17 +1134,7 @@ class TestDAGDecisionsBuilding:
                 {"eventId": 16, "eventType": "DecisionTaskStarted"},
             ],
         }
-        expected_decisions = [
-            {
-                "decisionType": "RequestCancelActivityTask",
-                "requestCancelActivityTaskDecisionAttributes": {"activityId": "bar"},
-            },
-            {
-                "decisionType": "RequestCancelActivityTask",
-                "requestCancelActivityTaskDecisionAttributes": {"activityId": "yay"},
-            },
-            {"decisionType": "CancelWorkflowExecution"},
-        ]
+        expected_decisions = [{"decisionType": "CancelWorkflowExecution"}]
         instance = seddy_specs.DAGBuilder(workflow, task)
         instance.build_decisions()
         assert instance.decisions == expected_decisions
@@ -1162,7 +1150,7 @@ class TestDAGDecisionsBuilding:
                     {
                         "decisionType": "FailWorkflowExecution",
                         "failWorkflowExecutionDecisionAttributes": {
-                            "reason": "DeciderError",
+                            "details": "1 decisions failed",
                         },
                     }
                 ],
@@ -1183,7 +1171,7 @@ class TestDAGDecisionsBuilding:
                     {
                         "decisionType": "FailWorkflowExecution",
                         "failWorkflowExecutionDecisionAttributes": {
-                            "reason": "FailRetry",
+                            "details": "1 decisions failed",
                         },
                     }
                 ],
