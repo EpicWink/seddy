@@ -7,25 +7,81 @@ import logging as lg
 from . import _base
 
 logger = lg.getLogger(__name__)
-_at_attr_keys = {
+_attr_keys = {
+    "ActivityTaskCancelRequested": "activityTaskCancelRequestedEventAttributes",
+    "ActivityTaskCanceled": "activityTaskCanceledEventAttributes",
     "ActivityTaskCompleted": "activityTaskCompletedEventAttributes",
     "ActivityTaskFailed": "activityTaskFailedEventAttributes",
-    "ActivityTaskTimedOut": "activityTaskTimedOutEventAttributes",
     "ActivityTaskScheduled": "activityTaskScheduledEventAttributes",
     "ActivityTaskStarted": "activityTaskStartedEventAttributes",
-}
-_decision_failed_attr_keys = {
-    "ScheduleActivityTaskFailed": "scheduleActivityTaskFailedEventAttributes",
-    "RequestCancelActivityTaskFailed": "requestCancelActivityTaskFailedEventAttributes",
-    "StartTimerFailed": "startTimerFailedEventAttributes",
+    "ActivityTaskTimedOut": "activityTaskTimedOutEventAttributes",
     "CancelTimerFailed": "cancelTimerFailedEventAttributes",
-    "StartChildWorkflowExecutionFailed": "startChildWorkflowExecutionFailedEventAttributes",
-    "SignalExternalWorkflowExecutionFailed": "signalExternalWorkflowExecutionFailedEventAttributes",
-    "RequestCancelExternalWorkflowExecutionFailed": "requestCancelExternalWorkflowExecutionFailedEventAttributes",
     "CancelWorkflowExecutionFailed": "cancelWorkflowExecutionFailedEventAttributes",
+    "ChildWorkflowExecutionCanceled": "childWorkflowExecutionCanceledEventAttributes",
+    "ChildWorkflowExecutionCompleted": "childWorkflowExecutionCompletedEventAttributes",
+    "ChildWorkflowExecutionFailed": "childWorkflowExecutionFailedEventAttributes",
+    "ChildWorkflowExecutionStarted": "childWorkflowExecutionStartedEventAttributes",
+    "ChildWorkflowExecutionTerminated": "childWorkflowExecutionTerminatedEventAttributes",
+    "ChildWorkflowExecutionTimedOut": "childWorkflowExecutionTimedOutEventAttributes",
     "CompleteWorkflowExecutionFailed": "completeWorkflowExecutionFailedEventAttributes",
     "ContinueAsNewWorkflowExecutionFailed": "continueAsNewWorkflowExecutionFailedEventAttributes",
+    "DecisionTaskCompleted": "decisionTaskCompletedEventAttributes",
+    "DecisionTaskScheduled": "decisionTaskScheduledEventAttributes",
+    "DecisionTaskStarted": "decisionTaskStartedEventAttributes",
+    "DecisionTaskTimedOut": "decisionTaskTimedOutEventAttributes",
+    "ExternalWorkflowExecutionCancelRequested": "externalWorkflowExecutionCancelRequestedEventAttributes",
+    "ExternalWorkflowExecutionSignaled": "externalWorkflowExecutionSignaledEventAttributes",
     "FailWorkflowExecutionFailed": "failWorkflowExecutionFailedEventAttributes",
+    "LambdaFunctionCompleted": "lambdaFunctionCompletedEventAttributes",
+    "LambdaFunctionFailed": "lambdaFunctionFailedEventAttributes",
+    "LambdaFunctionScheduled": "lambdaFunctionScheduledEventAttributes",
+    "LambdaFunctionStarted": "lambdaFunctionStartedEventAttributes",
+    "LambdaFunctionTimedOut": "lambdaFunctionTimedOutEventAttributes",
+    "MarkerRecorded": "markerRecordedEventAttributes",
+    "RecordMarkerFailed": "recordMarkerFailedEventAttributes",
+    "RequestCancelActivityTaskFailed": "requestCancelActivityTaskFailedEventAttributes",
+    "RequestCancelExternalWorkflowExecutionFailed": "requestCancelExternalWorkflowExecutionFailedEventAttributes",
+    "RequestCancelExternalWorkflowExecutionInitiated": "requestCancelExternalWorkflowExecutionInitiatedEventAttributes",
+    "ScheduleActivityTaskFailed": "scheduleActivityTaskFailedEventAttributes",
+    "ScheduleLambdaFunctionFailed": "scheduleLambdaFunctionFailedEventAttributes",
+    "SignalExternalWorkflowExecutionFailed": "signalExternalWorkflowExecutionFailedEventAttributes",
+    "SignalExternalWorkflowExecutionInitiated": "signalExternalWorkflowExecutionInitiatedEventAttributes",
+    "StartChildWorkflowExecutionFailed": "startChildWorkflowExecutionFailedEventAttributes",
+    "StartChildWorkflowExecutionInitiated": "startChildWorkflowExecutionInitiatedEventAttributes",
+    "StartLambdaFunctionFailed": "startLambdaFunctionFailedEventAttributes",
+    "StartTimerFailed": "startTimerFailedEventAttributes",
+    "TimerCanceled": "timerCanceledEventAttributes",
+    "TimerFired": "timerFiredEventAttributes",
+    "TimerStarted": "timerStartedEventAttributes",
+    "WorkflowExecutionCancelRequested": "workflowExecutionCancelRequestedEventAttributes",
+    "WorkflowExecutionCanceled": "workflowExecutionCanceledEventAttributes",
+    "WorkflowExecutionCompleted": "workflowExecutionCompletedEventAttributes",
+    "WorkflowExecutionContinuedAsNew": "workflowExecutionContinuedAsNewEventAttributes",
+    "WorkflowExecutionFailed": "workflowExecutionFailedEventAttributes",
+    "WorkflowExecutionSignaled": "workflowExecutionSignaledEventAttributes",
+    "WorkflowExecutionStarted": "workflowExecutionStartedEventAttributes",
+    "WorkflowExecutionTerminated": "workflowExecutionTerminatedEventAttributes",
+    "WorkflowExecutionTimedOut": "workflowExecutionTimedOutEventAttributes",
+}
+_activity_events = {
+    "ActivityTaskCompleted",
+    "ActivityTaskFailed",
+    "ActivityTaskTimedOut",
+    "ActivityTaskScheduled",
+    "ActivityTaskStarted",
+}
+_decision_failed_events = {
+    "ScheduleActivityTaskFailed",
+    "RequestCancelActivityTaskFailed",
+    "StartTimerFailed",
+    "CancelTimerFailed",
+    "StartChildWorkflowExecutionFailed",
+    "SignalExternalWorkflowExecutionFailed",
+    "RequestCancelExternalWorkflowExecutionFailed",
+    "CancelWorkflowExecutionFailed",
+    "CompleteWorkflowExecutionFailed",
+    "ContinueAsNewWorkflowExecutionFailed",
+    "FailWorkflowExecutionFailed",
 }
 
 
@@ -71,18 +127,18 @@ class DAGBuilder(_base.DecisionsBuilder):
 
     def _get_scheduled_references(self):
         for event in self.task["events"]:
-            if event["eventType"] in _at_attr_keys:
+            if event["eventType"] in _activity_events:
                 if event["eventType"] == "ActivityTaskScheduled":
                     self._scheduled[event["eventId"]] = event
                 else:
-                    attrs = event[_at_attr_keys[event["eventType"]]]
+                    attrs = event[_attr_keys[event["eventType"]]]
                     self._scheduled[event["eventId"]] = _get(
                         attrs["scheduledEventId"], self.task["events"], "eventId"
                     )
 
     def _get_activity_task_events(self):
         for event in self.task["events"]:
-            if event["eventType"] in _at_attr_keys:
+            if event["eventType"] in _activity_events:
                 scheduled_event = self._scheduled[event["eventId"]]
                 attrs = scheduled_event["activityTaskScheduledEventAttributes"]
                 self._activity_task_events[attrs["activityId"]].append(event)
@@ -163,7 +219,7 @@ class DAGBuilder(_base.DecisionsBuilder):
 
     def _process_decision_failed(self, event: t.Dict[str, t.Any]) -> bool:
         event_ids = [event["eventId"] for event in self.task["events"]]
-        attrs = event[_decision_failed_attr_keys[event["eventType"]]]
+        attrs = event[_attr_keys[event["eventType"]]]
         if attrs["cause"] == "OPERATION_NOT_PERMITTED":
             idx = event_ids.index(attrs["DecisionTaskCompletedEventId"])
             dc_event = self.task["events"][idx]
@@ -208,7 +264,7 @@ class DAGBuilder(_base.DecisionsBuilder):
             return True
         elif event["eventType"] == "WorkflowExecutionStarted":
             self._schedule_initial_activity_tasks()
-        elif event["eventType"] in _decision_failed_attr_keys:
+        elif event["eventType"] in _decision_failed_events:
             return self._process_decision_failed(event)
         elif event["eventType"] in (
             "ChildWorkflowExecutionTimedOut",
