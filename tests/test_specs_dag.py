@@ -810,7 +810,6 @@ class TestDAGDecisionsBuilding:
                 "decisionType": "FailWorkflowExecution",
                 "failWorkflowExecutionDecisionAttributes": {
                     "reason": "activityFailure",
-                    "details": "Activity 'foo' failed",
                 },
             }
         ]
@@ -874,9 +873,69 @@ class TestDAGDecisionsBuilding:
             {
                 "decisionType": "FailWorkflowExecution",
                 "failWorkflowExecutionDecisionAttributes": {
-                    "reason": "activityTimeOut",
-                    "details": "Activity 'foo' timed-out",
+                    "reason": "activityFailure",
                 },
+            }
+        ]
+        instance = seddy_specs.DAGBuilder(workflow, task)
+        instance.build_decisions()
+        assert instance.decisions == expected_decisions
+
+    def test_foo_start_timed_out(self, workflow):
+        """Test DAG decisions building after foo activity start times-out."""
+        # Events sections
+        task = {
+            "taskToken": "spam",
+            "previousStartedEventId": 3,
+            "startedEventId": 9,
+            "events": [
+                {
+                    "eventId": 1,
+                    "eventType": "WorkflowExecutionStarted",
+                    "workflowExecutionStartedEventAttributes": {
+                        "input": (
+                            "{\n"
+                            '    "foo": {"spam": [42], "eggs": null},\n'
+                            '    "bar": null,\n'
+                            '    "yay": {"spam": [17], "eggs": [42]}\n'
+                            "}"
+                        )
+                    },
+                },
+                {"eventId": 2, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 3, "eventType": "DecisionTaskStarted"},
+                {"eventId": 4, "eventType": "DecisionTaskCompleted"},
+                {
+                    "eventId": 5,
+                    "eventType": "ActivityTaskScheduled",
+                    "activityTaskScheduledEventAttributes": {
+                        "activityId": "foo",
+                        "activityType": {"name": "spam-foo", "version": "0.3"},
+                        "decisionTaskCompletedEventId": 4,
+                        "input": '{"spam": [42], "eggs": null}',
+                    },
+                },
+                {
+                    "eventId": 6,
+                    "eventType": "ActivityTaskStarted",
+                    "activityTaskStartedEventAttributes": {"scheduledEventId": 5},
+                },
+                {
+                    "eventId": 7,
+                    "eventType": "ActivityTaskTimedOut",
+                    "activityTaskTimedOutEventAttributes": {
+                        "scheduledEventId": 5,
+                        "timeoutType": "SCHEDULE_TO_START",
+                    },
+                },
+                {"eventId": 8, "eventType": "DecisionTaskScheduled"},
+                {"eventId": 9, "eventType": "DecisionTaskStarted"},
+            ],
+        }
+        expected_decisions = [
+            {
+                "decisionType": "FailWorkflowExecution",
+                "failWorkflowExecutionDecisionAttributes": {"reason": "timeOut"},
             }
         ]
         instance = seddy_specs.DAGBuilder(workflow, task)

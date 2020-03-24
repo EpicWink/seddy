@@ -136,17 +136,12 @@ class DAGBuilder(_base.DecisionsBuilder):
         }
         self.decisions = [decision]
 
-    def _process_activity_task_failed_event(self, event: t.Dict[str, t.Any]):
-        attr = self._scheduled[event["eventId"]]["activityTaskScheduledEventAttributes"]
-        self._fail_workflow(
-            "activityFailure", "Activity '%s' failed" % attr["activityId"]
-        )
-
     def _process_activity_task_timed_out_event(self, event: t.Dict[str, t.Any]):
-        attr = self._scheduled[event["eventId"]]["activityTaskScheduledEventAttributes"]
-        self._fail_workflow(
-            "activityTimeOut", "Activity '%s' timed-out" % attr["activityId"]
-        )
+        timeout_type = event["activityTaskTimedOutEventAttributes"]["timeoutType"]
+        if timeout_type in ("START_TO_CLOSE", "HEARTBEAT"):
+            self._fail_workflow("activityFailure")
+        elif timeout_type in ("SCHEDULE_TO_START", "SCHEDULE_TO_CLOSE"):
+            self._fail_workflow("timeOut")
 
     def _process_cancel_requested_event(self):
         # Cancel running activity tasks
@@ -203,7 +198,7 @@ class DAGBuilder(_base.DecisionsBuilder):
         if event["eventType"] == "ActivityTaskCompleted":
             self._process_activity_task_completed_event(event)
         elif event["eventType"] == "ActivityTaskFailed":
-            self._process_activity_task_failed_event(event)
+            self._fail_workflow("activityFailure")
             return True
         elif event["eventType"] == "ActivityTaskTimedOut":
             self._process_activity_task_timed_out_event(event)
