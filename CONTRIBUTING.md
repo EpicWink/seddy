@@ -21,6 +21,13 @@ https://black.readthedocs.io/en/stable/)
 See the [issues page](https://github.com/EpicWink/seddy/issues) for the current
 discussions on improvements, features and bugs.
 
+## Design goal
+`seddy` is designed to be a decider and workflow definition manager for multiple
+workflows. All other interaction with SWF is either already provided by the AWS CLI
+[`awscli`](https://aws.amazon.com/cli/), or is part of the activity worker. Therefore,
+`seddy` won't be replicating functionality from `awscli`, so it will focus on being a
+multi-workflow decider and registration manager.
+
 ## Generating documentation
 A simple Makefile handles the pre-requisites installation, documentation markup
 generation and documentation generation.
