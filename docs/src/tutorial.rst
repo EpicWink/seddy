@@ -7,7 +7,7 @@ We'll use `moto <https://github.com/spulec/moto>`_, a tool which mocks out SWF.
 
 .. warning::
 
-   ``moto`` v1.13.4 doesn't correctly support SWF. In particular:
+   ``moto`` v1.3.14 doesn't correctly support SWF. In particular:
 
    * Task-polling returns instantly
    * No-task result from task-polling is missing ``taskToken``, so ``seddy decider``
@@ -15,6 +15,7 @@ We'll use `moto <https://github.com/spulec/moto>`_, a tool which mocks out SWF.
    * Decision tasks have incorrect value for ``previousStartedEventId``, so ``seddy
      decider`` will crash after the two decision tasks
 
+   Use a development version of ``moto`` (from source) until v1.3.15 is released.
    These are not issues when using ``seddy`` for real
 
 Set-up
