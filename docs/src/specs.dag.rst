@@ -17,8 +17,8 @@ A DAG-type workflow (element of ``workflows``) has specification
 
    * **id** (*string*): task ID, must be unique within a workflow execution and without
      ``:``, ``/``, ``|``, ``arn`` or any control character
-   * **type**: activity type, with **name** (*str*, activity name) and **version**
-     (*str*, activity version)
+   * **type** (*object*): activity type, with **name** (*str*, activity name) and
+     **version** (*str*, activity version)
    * **heartbeat** (*int or "NONE"*): optional, task heartbeat time-out (seconds), or
      ``"NONE"`` for unlimited
    * **timeout** (*int*): optional, task time-out (seconds), or ``"None"`` for unlimited
