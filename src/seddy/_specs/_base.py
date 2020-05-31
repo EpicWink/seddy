@@ -2,6 +2,7 @@
 
 import abc
 import enum
+import dataclasses
 import typing as t
 
 
@@ -22,6 +23,7 @@ class ChildPolicy(enum.Enum):
     ABANDON = "ABANDON"
 
 
+@dataclasses.dataclass
 class Registration:
     """Workflow registration configuration.
 
@@ -37,23 +39,13 @@ class Registration:
         lambda_role: default IAM role for Lambda access
     """
 
-    def __init__(
-        self,
-        active: bool = True,
-        task_timeout: t.Union[int, str] = None,
-        execution_timeout: int = None,
-        task_list: str = None,
-        task_priority: int = None,
-        child_policy: ChildPolicy = None,
-        lambda_role: str = None,
-    ):
-        self.active = active
-        self.task_timeout = task_timeout
-        self.execution_timeout = execution_timeout
-        self.task_list = task_list
-        self.task_priority = task_priority
-        self.child_policy = child_policy
-        self.lambda_role = lambda_role
+    active: bool = True
+    task_timeout: t.Union[int, str] = None
+    execution_timeout: int = None
+    task_list: str = None
+    task_priority: int = None
+    child_policy: ChildPolicy = None
+    lambda_role: str = None
 
     @classmethod
     def from_spec(cls, spec: t.Dict[str, t.Any]):
