@@ -3,6 +3,7 @@
 import logging as lg
 
 from seddy import _specs as seddy_specs
+from seddy._specs import _dag
 import pytest
 
 lg.root.setLevel(lg.DEBUG)
@@ -212,8 +213,8 @@ class TestDAGDecisionsBuilding:
     def test_foo_complete_yay_unsatisfied(self, workflow):
         """Test DAG decisions building after foo completes yet yay not ready."""
         workflow.dependants["bar"] = ["yay"]
-        assert workflow.task_specs[2]["id"] == "yay"
-        workflow.task_specs[2]["dependencies"] = ["foo", "bar"]
+        assert workflow.task_specs[2].id == "yay"
+        workflow.task_specs[2].dependencies = ["foo", "bar"]
         task = {
             "taskToken": "spam",
             "previousStartedEventId": 3,
@@ -1327,7 +1328,7 @@ class TestWorkflow:
     """Test ``seddy._specs.DAGWorkflow``."""
 
     @pytest.fixture
-    def task_specs(self):
+    def task_spec_dicts(self):
         """Example DAG-type workflow tasks specifications."""
         return [
             {
@@ -1355,13 +1356,18 @@ class TestWorkflow:
         ]
 
     @pytest.fixture
-    def spec(self, task_specs):
+    def task_specs(self, task_spec_dicts):
+        """Example deserialised DAG-type workflow tasks specifications."""
+        return [_dag.Task.from_spec(s) for s in task_spec_dicts]
+
+    @pytest.fixture
+    def spec(self, task_spec_dicts):
         """Example DAG-type workflow specification."""
         return {
             "name": "foo",
             "version": "0.42",
             "description": "A DAGflow",
-            "tasks": task_specs,
+            "tasks": task_spec_dicts,
             "type": "dag",
         }
 
@@ -1375,7 +1381,7 @@ class TestWorkflow:
         assert instance.name == "foo"
         assert instance.version == "0.42"
         assert instance.description == "A DAGflow"
-        assert instance.task_specs is task_specs
+        assert instance.task_specs == task_specs
         assert instance.spec_type == "dag"
         assert instance.decisions_builder is seddy_specs.DAGBuilder
         assert instance.dependants == {None: []}
@@ -1387,7 +1393,7 @@ class TestWorkflow:
         assert res.name == "foo"
         assert res.version == "0.42"
         assert res.description == "A DAGflow"
-        assert res.task_specs is task_specs
+        assert res.task_specs == task_specs
 
     def test_setup(self, instance):
         """Test DAG-type workflow specification pre-computation."""

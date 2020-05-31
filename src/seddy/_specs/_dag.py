@@ -1,6 +1,7 @@
 """SWF decisions making."""
 
 import json
+import dataclasses
 import typing as t
 import logging as lg
 
@@ -99,6 +100,60 @@ _decision_failed_events = {
 }
 
 
+@dataclasses.dataclass
+class Task:  # TODO: unit-test
+    """DAG-type workflow activity task specification.
+
+    Args:
+        id: task ID, must be unique within a workflow execution and
+            without ':', '/', '|', 'arn' or any control character
+        name: activity type name
+        version: activity type version
+        heartbeat: task heartbeat time-out (seconds), or "NONE" for
+            unlimited
+        timeout: task time-out (seconds), or "None" for unlimited
+        task_list: task-list to schedule task on
+        priority: task priority
+        dependencies: IDs of task’s dependencies
+    """
+
+    id: str
+    name: str
+    version: str
+    heartbeat: t.Union[int, str] = None
+    timeout: t.Union[int, str] = None
+    task_list: str = None
+    priority: int = None
+    dependencies: t.List[str] = None
+
+    @property
+    def type(self) -> t.Dict[str, str]:
+        """Activity type."""
+        return {"name": self.name, "version": self.version}
+
+    @classmethod
+    def from_spec(cls, spec: t.Dict[str, t.Any]) -> "Task":
+        """Construct registration configuration from specification.
+
+        Args:
+            spec: workflow registration configuration specification
+        """
+
+        args = (spec["id"], spec["type"]["name"], spec["type"]["version"])
+        kwargs = {}
+        if "heartbeat" in spec:
+            kwargs["heartbeat"] = spec["heartbeat"]
+        if "timeout" in spec:
+            kwargs["timeout"] = spec["timeout"]
+        if "task_list" in spec:
+            kwargs["task_list"] = spec["task_list"]
+        if "priority" in spec:
+            kwargs["priority"] = spec["priority"]
+        if "dependencies" in spec:
+            kwargs["dependencies"] = spec["dependencies"]
+        return cls(*args, **kwargs)
+
+
 def _get(item_id, items, id_key):
     """Get item from list with given ID."""
     return next(item for item in items if item[id_key] == item_id)
@@ -109,32 +164,33 @@ class DAGBuilder(_base.DecisionsBuilder):
 
     def __init__(self, workflow: "DAGWorkflow", task):
         super().__init__(workflow, task)
+        self.workflow = workflow
         self._scheduled = {}
-        self._activity_task_events = {at["id"]: [] for at in workflow.task_specs}
+        self._activity_task_events = {at.id: [] for at in workflow.task_specs}
         self._new_events = None
         self._error_events = []
         self._ready_activities = set()
 
-    def _schedule_task(self, activity_task: t.Dict[str, t.Any]):
+    def _schedule_task(self, activity_task: Task):
         workflow_started_event = self.task["events"][0]
         assert workflow_started_event["eventType"] == "WorkflowExecutionStarted"
         attrs = workflow_started_event["workflowExecutionStartedEventAttributes"]
         decision_attributes = {
-            "activityId": activity_task["id"],
-            "activityType": activity_task["type"],
+            "activityId": activity_task.id,
+            "activityType": activity_task.type,
         }
 
         input_ = json.loads(attrs.get("input", "null"))
-        if input_ and activity_task["id"] in input_:
-            decision_attributes["input"] = json.dumps(input_[activity_task["id"]])
-        if "heartbeat" in activity_task:
-            decision_attributes["heartbeatTimeout"] = str(activity_task["heartbeat"])
-        if "timeout" in activity_task:
-            decision_attributes["startToCloseTimeout"] = str(activity_task["timeout"])
-        if "task_list" in activity_task:
-            decision_attributes["taskList"] = {"name": activity_task["task_list"]}
-        if "priority" in activity_task:
-            decision_attributes["taskPriority"] = str(activity_task["priority"])
+        if input_ and activity_task.id in input_:
+            decision_attributes["input"] = json.dumps(input_[activity_task.id])
+        if activity_task.heartbeat is not None:
+            decision_attributes["heartbeatTimeout"] = str(activity_task.heartbeat)
+        if activity_task.timeout is not None:
+            decision_attributes["startToCloseTimeout"] = str(activity_task.timeout)
+        if activity_task.task_list is not None:
+            decision_attributes["taskList"] = {"name": activity_task.task_list}
+        if activity_task.priority is not None:
+            decision_attributes["taskPriority"] = str(activity_task.priority)
 
         decision = {
             "decisionType": "ScheduleActivityTask",
@@ -167,16 +223,16 @@ class DAGBuilder(_base.DecisionsBuilder):
 
         for activity_task_id in dependants_task:
             assert not self._activity_task_events[activity_task_id]
-            activity_task = _get(activity_task_id, self.workflow.task_specs, "id")
+            task = next(a for a in self.workflow.task_specs if a.id == activity_task_id)
 
             dependencies_satisfied = True
-            for dependency_activity_task_id in activity_task["dependencies"]:
+            for dependency_activity_task_id in task.dependencies:
                 events = self._activity_task_events[dependency_activity_task_id]
                 if not events or events[-1]["eventType"] != "ActivityTaskCompleted":
                     dependencies_satisfied = False
                     break
             if dependencies_satisfied:
-                self._ready_activities.add(activity_task["id"])
+                self._ready_activities.add(task.id)
 
     def _complete_workflow(self):
         tasks_complete = True
@@ -311,8 +367,8 @@ class DAGBuilder(_base.DecisionsBuilder):
 
     def _schedule_tasks(self):
         for task_id in self._ready_activities:
-            task = next(ts for ts in self.workflow.task_specs if ts["id"] == task_id)
-            assert not self._activity_task_events[task["id"]]
+            task = next(ts for ts in self.workflow.task_specs if ts.id == task_id)
+            assert not self._activity_task_events[task.id]
             self._schedule_task(task)
 
     def _process_new_events(self):
@@ -348,10 +404,9 @@ class DAGWorkflow(_base.Workflow):
 
     spec_type = "dag"
     decisions_builder = DAGBuilder
+    _task_cls = Task
 
-    def __init__(
-        self, name, version, task_specs: t.List[t.Dict[str, t.Any]], description=None
-    ):
+    def __init__(self, name, version, task_specs: t.List[Task], description=None):
         super().__init__(name, version, description)
         self.task_specs = task_specs
         self.dependants = {None: []}
@@ -359,18 +414,19 @@ class DAGWorkflow(_base.Workflow):
     @classmethod
     def _args_from_spec(cls, spec):
         args, kwargs = super()._args_from_spec(spec)
-        args += (spec["tasks"],)
+        tasks = [cls._task_cls.from_spec(s) for s in spec["tasks"]]
+        args += (tasks,)
         return args, kwargs
 
     def _build_dependants(self):
         for activity_task in self.task_specs:
             dependants_task = []
             for other_activity_task in self.task_specs:
-                if activity_task["id"] in other_activity_task.get("dependencies", []):
-                    dependants_task.append(other_activity_task["id"])
-            self.dependants[activity_task["id"]] = dependants_task
-            if not activity_task.get("dependencies", []):
-                self.dependants[None].append(activity_task["id"])
+                if activity_task.id in (other_activity_task.dependencies or []):
+                    dependants_task.append(other_activity_task.id)
+            self.dependants[activity_task.id] = dependants_task
+            if not activity_task.dependencies:
+                self.dependants[None].append(activity_task.id)
 
     def setup(self):
         self._build_dependants()
