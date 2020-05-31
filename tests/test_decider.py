@@ -57,8 +57,31 @@ class TestDecider:
         assert isinstance(instance.client, botocore_client.BaseClient)
         assert instance.identity == "abcd1234"
 
+    @pytest.fixture
+    def patch_moto_swf_decision_task(self):
+        """Temporarily patch ``moto`` to fix decision-task contents."""
+        from moto.swf.models import workflow_execution as swf_models
+
+        class DecisionTask(swf_models.DecisionTask):
+            def __init__(self, workflow_execution, scheduled_event_id):
+                super().__init__(workflow_execution, scheduled_event_id)
+                self.previous_started_event_id = None
+
+            def to_full_dict(self, reverse_order=False):
+                hsh = super().to_full_dict(reverse_order=reverse_order)
+                if (
+                    "previousStartedEventId" in hsh
+                    and self.previous_started_event_id is None
+                ):
+                    hsh.pop("previousStartedEventId")
+                return hsh
+
+        task_patch = mock.patch.object(swf_models, "DecisionTask", DecisionTask)
+        with task_patch:
+            yield
+
     @moto.mock_swf
-    def test_poll_for_decision_task(self, instance):
+    def test_poll_for_decision_task(self, instance, patch_moto_swf_decision_task):
         # Setup environment
         instance.client.register_domain(
             name="spam", workflowExecutionRetentionPeriodInDays="2"
@@ -114,7 +137,6 @@ class TestDecider:
                     },
                 },
             ],
-            "previousStartedEventId": 0,
             "startedEventId": 3,
             "taskToken": mock.ANY,
             "workflowExecution": {"runId": resp["runId"], "workflowId": "1234"},
