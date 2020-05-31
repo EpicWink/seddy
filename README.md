@@ -18,12 +18,13 @@ Features:
 * Register workflows
 
 What `seddy` doesn't do:
-* Activities management
+* Activity workers
 * Anything [AWS CLI](https://aws.amazon.com/cli/) can
   * Workflows listing and detailing
   * Workflow execution management and history detailing
   * Tag management
   * Domain management
+  * Activities management
 * Validate workflow execution input
 * Manage workflows definition file (`seddy` just uses it)
 
