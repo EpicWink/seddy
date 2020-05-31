@@ -9,6 +9,176 @@ import pytest
 lg.root.setLevel(lg.DEBUG)
 
 
+@pytest.mark.parametrize(
+    ("path", "obj", "exp"),
+    [
+        ("$", None, None),
+        ("$", {}, {}),
+        ("$", [], []),
+        ("$", 42, 42),
+        ("$", "spam", "spam"),
+        (
+            "$.spam[0].eggs.swallow[2]",
+            {"spam": [{"eggs": {"swallow": [None, None, 42]}}, False]},
+            42,
+        ),
+        (
+            "$.spam[0].eggs.swallow",
+            {"spam": [{"eggs": {"swallow": [None, None, 42]}}, False]},
+            [None, None, 42],
+        ),
+        (
+            "$.spam[0].eggs",
+            {"spam": [{"eggs": {"swallow": [None, None, 42]}}, False]},
+            {"swallow": [None, None, 42]},
+        ),
+        (
+            "$.spam[0]",
+            {"spam": [{"eggs": {"swallow": [None, None, 42]}}, False]},
+            {"eggs": {"swallow": [None, None, 42]}},
+        ),
+        (
+            "$.spam",
+            {"spam": [{"eggs": {"swallow": [None, None, 42]}}, False]},
+            [{"eggs": {"swallow": [None, None, 42]}}, False],
+        ),
+        (
+            "$",
+            {"spam": [{"eggs": {"swallow": [None, None, 42]}}, False]},
+            {"spam": [{"eggs": {"swallow": [None, None, 42]}}, False]},
+        ),
+        ("$[1]", [{"eggs": {"swallow": [None, None, 42]}}, False], False),
+    ],
+)
+def test_get_item_jsonpath(path, obj, exp):
+    assert _dag._get_item_jsonpath(path, obj) == exp
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "$spam[0].eggs.swallow[2]",
+        ".spam[0].eggs.swallow[2]",
+        "spam[0].eggs.swallow[2]",
+        "$.spam0].eggs.swallow[2]",
+        "$.spam[0.eggs.swallow[2]",
+        "$.spam[[0]].eggs.swallow[2]",
+        "$.spam[0.eggs].swallow[2]",
+        "$.spam[a].eggs.swallow[2]",
+        "$.spam[0][eggs].swallow[2]",
+        "$.spam[0].eggs-swallow[2]",
+        "$.spam[0].eggs$.swallow[2]",
+        "$.spam[0]].eggs.swallow[2]",
+        "$.spam[[0].eggs.swallow[2]",
+        "$.spam[0].eggs.swallow[*]",
+    ],
+)
+def test_get_item_jsonpath_bad_path(path):
+    obj = {"spam": [{"eggs": {"swallow": [None, None, 42]}}, False]}
+    with pytest.raises(ValueError):
+        _dag._get_item_jsonpath(path, obj)
+
+
+@pytest.mark.parametrize(
+    ("spec", "workflow_input", "activity_results", "exp"),
+    [
+        pytest.param(None, None, {}, _dag._sentinel, id="none"),
+        pytest.param(
+            None, {"foo": {"spam": 42}, "bar": False}, {}, _dag._sentinel, id="none"
+        ),
+        pytest.param(_dag.NoInput(), None, {}, _dag._sentinel, id="none"),
+        pytest.param(
+            _dag.Constant(None), None, {}, None, id="constant"
+        ),
+        pytest.param(
+            _dag.Constant({"spam": [{"eggs": {"swallow": [None, None, 42]}}, False]}),
+            None,
+            {},
+            {"spam": [{"eggs": {"swallow": [None, None, 42]}}, False]},
+            id="constant",
+        ),
+        pytest.param(
+            _dag.Constant({"spam": [{"eggs": {"swallow": [None, None, 42]}}, False]}),
+            {"foo": {"spam": 42, "eggs": None, "ham": [1, 2]}, "bar": False},
+            {},
+            {"spam": [{"eggs": {"swallow": [None, None, 42]}}, False]},
+            id="constant",
+        ),
+        pytest.param(
+            _dag.WorkflowInput(),
+            {"foo": {"spam": 42, "eggs": None, "ham": [1, 2]}, "bar": False},
+            {},
+            {"foo": {"spam": 42, "eggs": None, "ham": [1, 2]}, "bar": False},
+            id="workflow-input",
+        ),
+        pytest.param(
+            _dag.WorkflowInput("$.foo"),
+            {"foo": {"spam": 42, "eggs": None, "ham": [1, 2]}, "bar": False},
+            {},
+            {"spam": 42, "eggs": None, "ham": [1, 2]},
+            id="workflow-input",
+        ),
+        pytest.param(
+            _dag.WorkflowInput("$.foo.ham[1]"),
+            {"foo": {"spam": 42, "eggs": None, "ham": [1, 2]}, "bar": False},
+            {},
+            2,
+            id="workflow-input",
+        ),
+        pytest.param(
+            _dag.DependencyResult("foo"),
+            None,
+            {"foo": [{"spam": "eggs", "ham": 42}, False], "bar": None},
+            [{"spam": "eggs", "ham": 42}, False],
+            id="dependency-result",
+        ),
+        pytest.param(
+            _dag.DependencyResult("foo"),
+            {"foo": {"spam": 42, "eggs": None, "ham": [1, 2]}, "bar": False},
+            {"foo": [{"spam": "eggs", "ham": 42}, False], "bar": None},
+            [{"spam": "eggs", "ham": 42}, False],
+            id="dependency-result",
+        ),
+        pytest.param(
+            _dag.DependencyResult("foo", "$[0].spam"),
+            {"foo": {"spam": 42, "eggs": None, "ham": [1, 2]}, "bar": False},
+            {"foo": [{"spam": "eggs", "ham": 42}, False], "bar": None},
+            "eggs",
+            id="dependency-result",
+        ),
+        pytest.param(
+            _dag.Object(
+                {
+                    "pie": _dag.DependencyResult("foo", "$[0].spam"),
+                    "cheese": _dag.Object(
+                        {
+                            "a": _dag.Constant(["b"]),
+                            "c": _dag.NoInput(),
+                            "d": _dag.DependencyResult("bar"),
+                        },
+                    ),
+                    "gravy": _dag.WorkflowInput("$.bar"),
+                },
+            ),
+            {"foo": {"spam": 42, "eggs": None, "ham": [1, 2]}, "bar": False},
+            {"foo": [{"spam": "eggs", "ham": 42}, False], "bar": None},
+            {"pie": "eggs", "cheese": {"a": ["b"], "d": None}, "gravy": False},
+            id="object",
+        ),
+    ],
+)
+def test_build_activity_input(spec, workflow_input, activity_results, exp):
+    assert _dag._build_activity_input(spec, workflow_input, activity_results) == exp
+
+
+def test_build_activity_input_unknown_type():
+    input_spec = _dag.TaskInput()
+    workflow_input = {"foo": {"spam": 42, "eggs": None, "ham": [1, 2]}, "bar": False}
+    activity_results = {"foo": [{"spam": "eggs", "ham": 42}, False], "bar": None}
+    with pytest.raises(TypeError):
+        _dag._build_activity_input(input_spec, workflow_input, activity_results)
+
+
 class TestDAGDecisionsBuilding:
     """Test ``seddy._specs.DAGBuilder``."""
 
@@ -23,6 +193,7 @@ class TestDAGDecisionsBuilding:
                     {
                         "id": "foo",
                         "type": {"name": "spam-foo", "version": "0.3"},
+                        "input": {"type": "workflow-input", "path": "$.foo"},
                         "heartbeat": 60,
                         "timeout": 86400,
                         "task_list": "eggs",
@@ -31,6 +202,7 @@ class TestDAGDecisionsBuilding:
                     {
                         "id": "bar",
                         "type": {"name": "spam-bar", "version": "0.1"},
+                        "input": {"type": "workflow-input", "path": "$.bar"},
                         "heartbeat": 60,
                         "timeout": 86400,
                         "dependencies": ["foo"],
@@ -38,6 +210,7 @@ class TestDAGDecisionsBuilding:
                     {
                         "id": "yay",
                         "type": {"name": "spam-foo", "version": "0.3"},
+                        "input": {"type": "workflow-input", "path": "$.yay"},
                         "heartbeat": 60,
                         "timeout": 86400,
                         "dependencies": ["foo"],
@@ -45,6 +218,7 @@ class TestDAGDecisionsBuilding:
                     {
                         "id": "tin",
                         "type": {"name": "spam-tin", "version": "1.2"},
+                        "input": {"type": "none"},
                         "heartbeat": 30,
                         "timeout": 43200,
                         "dependencies": ["yay"],

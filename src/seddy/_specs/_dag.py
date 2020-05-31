@@ -1,6 +1,7 @@
 """SWF decisions making."""
 
 import json
+import string
 import dataclasses
 import typing as t
 import logging as lg
@@ -8,6 +9,8 @@ import logging as lg
 from . import _base
 
 logger = lg.getLogger(__name__)
+_jsonpath_characters = string.digits + string.ascii_letters + "_"
+_sentinel = object()
 _attr_keys = {
     "ActivityTaskCancelRequested": "activityTaskCancelRequestedEventAttributes",
     "ActivityTaskCanceled": "activityTaskCanceledEventAttributes",
@@ -101,6 +104,77 @@ _decision_failed_events = {
 
 
 @dataclasses.dataclass
+class TaskInput:
+    @staticmethod
+    def from_spec(spec: t.Dict[str, t.Any]) -> "TaskInput":
+        for cls in [NoInput, Constant, WorkflowInput, DependencyResult, Object]:
+            if cls.type == spec["type"]:
+                break
+        else:  # TODO: unit-test
+            raise ValueError(spec["type"])
+        return cls.from_spec(spec)
+
+
+@dataclasses.dataclass
+class NoInput(TaskInput):
+    type: t.ClassVar = "none"
+
+    @classmethod
+    def from_spec(cls, spec) -> "NoInput":
+        return cls()
+
+
+@dataclasses.dataclass
+class Constant(TaskInput):
+    type: t.ClassVar = "constant"
+    value: t.Any
+
+    @classmethod
+    def from_spec(cls, spec) -> "Constant":
+        return cls(spec["value"])
+
+
+@dataclasses.dataclass
+class WorkflowInput(TaskInput):
+    type: t.ClassVar = "workflow-input"
+    path: str = "$"
+
+    @classmethod
+    def from_spec(cls, spec) -> "WorkflowInput":
+        kwargs = {}
+        if "path" in spec:
+            kwargs["path"] = spec["path"]
+        return cls(**kwargs)
+
+
+@dataclasses.dataclass
+class DependencyResult(TaskInput):
+    type: t.ClassVar = "dependency-result"
+    id: t.Any
+    path: str = "$"
+
+    @classmethod
+    def from_spec(cls, spec) -> "DependencyResult":
+        kwargs = {}
+        if "path" in spec:
+            kwargs["path"] = spec["path"]
+        return cls(spec["id"], **kwargs)
+
+
+@dataclasses.dataclass
+class Object(TaskInput):
+    type: t.ClassVar = "object"
+    items: t.Dict[str, TaskInput]
+
+    @classmethod
+    def from_spec(cls, spec) -> "Object":
+        items = {}
+        for key, subspec in spec["items"].items():
+            items[key] = cls.from_spec(subspec)
+        return cls(items)
+
+
+@dataclasses.dataclass
 class Task:  # TODO: unit-test
     """DAG-type workflow activity task specification.
 
@@ -120,11 +194,13 @@ class Task:  # TODO: unit-test
     id: str
     name: str
     version: str
+    input: t.Union[NoInput, Constant, WorkflowInput, DependencyResult, Object] = None
     heartbeat: t.Union[int, str] = None
     timeout: t.Union[int, str] = None
     task_list: str = None
     priority: int = None
     dependencies: t.List[str] = None
+    _input_cls: t.ClassVar = TaskInput
 
     @property
     def type(self) -> t.Dict[str, str]:
@@ -141,6 +217,8 @@ class Task:  # TODO: unit-test
 
         args = (spec["id"], spec["type"]["name"], spec["type"]["version"])
         kwargs = {}
+        if "input" in spec:
+            kwargs["input"] = cls._input_cls.from_spec(spec["input"])
         if "heartbeat" in spec:
             kwargs["heartbeat"] = spec["heartbeat"]
         if "timeout" in spec:
@@ -157,6 +235,102 @@ class Task:  # TODO: unit-test
 def _get(item_id, items, id_key):
     """Get item from list with given ID."""
     return next(item for item in items if item[id_key] == item_id)
+
+
+def _get_item_jsonpath(path: str, obj) -> t.Any:
+    """Get a child item from an object.
+
+    Args:
+        path: path to child item, using basic single-valued JSONPath
+            syntax
+        obj: object to get child item from
+
+    Returns:
+        pointed-to child item
+
+    Raises:
+        ValueError: invalid path
+    """
+
+    if path[0] != "$":
+        raise ValueError("invalid path (must start at root): %s" % path)
+
+    indices = []
+    chars = []
+    state = None
+    for char in path[1:]:
+        if char in ".[":
+            if state:
+                if state != ".":
+                    raise ValueError("invalid path (missing closing ']'): %s" % path)
+                elif not chars:
+                    raise ValueError("invalid path (empty key): %s" % path)
+                indices.append("".join(chars))
+            chars = []
+            state = char
+        elif char == "]":
+            if state != "[":
+                raise ValueError("invalid path (invalid key): %s" % path)
+            elif not chars:
+                raise ValueError("invalid path (empty key): %s" % path)
+            index = int("".join(chars))
+            indices.append(index)
+            chars = []
+            state = None
+        elif char not in _jsonpath_characters:
+            raise ValueError("invalid path (illegal characters): %s" % path)
+        else:
+            if not state:
+                raise ValueError("invalid path (missing '.' or '['): %s" % path)
+            chars.append(char)
+    if state == "[":
+        raise ValueError("invalid path (missing closing ']'): %s" % path)
+    elif state == ".":
+        indices.append("".join(chars))
+
+    item = obj
+    for index in indices:
+        item = item[index]
+    return item
+
+
+def _build_activity_input(
+    input_spec: TaskInput,
+    workflow_input: t.Union[t.Dict[str, t.Any], None],
+    activity_results: t.Dict[str, t.Any],
+) -> t.Any:
+    """Build activity input.
+
+    Args:
+        input_spec: activity task input specification
+        workflow_input: workflow input
+        activity_results: activities' results
+
+    Returns:
+        activity task input
+    """
+
+    input_spec = input_spec or NoInput()
+    if isinstance(input_spec, NoInput):
+        return _sentinel
+    if isinstance(input_spec, Constant):
+        return input_spec.value
+    if isinstance(input_spec, WorkflowInput):
+        path = input_spec.path
+        return _get_item_jsonpath(path, workflow_input)
+    if isinstance(input_spec, DependencyResult):
+        path = input_spec.path
+        dependency_result = activity_results[input_spec.id]
+        return _get_item_jsonpath(path, dependency_result)
+    if isinstance(input_spec, Object):
+        input_ = {}
+        for key, subspec in input_spec.items.items():
+            value = _build_activity_input(subspec, workflow_input, activity_results)
+            if value is not _sentinel:
+                input_[key] = value
+        return input_
+    else:
+        raise TypeError(input_spec)
 
 
 class DAGBuilder(_base.DecisionsBuilder):
@@ -180,9 +354,23 @@ class DAGBuilder(_base.DecisionsBuilder):
             "activityType": activity_task.type,
         }
 
-        input_ = json.loads(attrs.get("input", "null"))
-        if input_ and activity_task.id in input_:
-            decision_attributes["input"] = json.dumps(input_[activity_task.id])
+        # Build input
+        input_spec = activity_task.input
+        workflow_input = json.loads(attrs.get("input", "null"))
+        activity_results = {}
+        for activity_task_id, events in self._activity_task_events.items():
+            if activity_task_id in (activity_task.dependencies or []):
+                assert events[-1]["eventType"] == "ActivityTaskCompleted"
+            elif not events or events[-1]["eventType"] != "ActivityTaskCompleted":
+                continue
+            d_attrs = events[-1].get("activityTaskCompletedEventAttributes", {})
+            if "result" in d_attrs:
+                activity_results[activity_task_id] = json.loads(d_attrs["result"])
+        input_ = _build_activity_input(input_spec, workflow_input, activity_results)
+        if input_ is not _sentinel:
+            decision_attributes["input"] = json.dumps(input_)
+
+        # Set other attributes
         if activity_task.heartbeat is not None:
             decision_attributes["heartbeatTimeout"] = str(activity_task.heartbeat)
         if activity_task.timeout is not None:

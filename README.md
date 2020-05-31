@@ -16,6 +16,7 @@ Features:
 * Supports coloured logging
 * Extensible decision-building: just subclass `seddy.DecisionsBuilder`
 * Register workflows
+* Customise task input
 
 What `seddy` doesn't do:
 * Activity workers

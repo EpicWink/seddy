@@ -14,6 +14,9 @@ workflows:
         type:
           name: spam-foo
           version: "0.3"
+        input:
+          type: workflow-input
+          path: $.foo
         timeout: 10
         task_list: eggs
         priority: 1
@@ -21,6 +24,9 @@ workflows:
         type:
           name: spam-foo
           version: "0.4"
+        input:
+          type: workflow-input
+          path: $.bar
         timeout: 10
         task_list: eggs
         dependencies:
@@ -39,6 +45,9 @@ workflows:
         type:
           name: spam-foo
           version: "0.4"
+        input:
+          type: workflow-input
+          path: $.foo
         timeout: 5
         task_list: eggs
         priority: 1
@@ -46,6 +55,9 @@ workflows:
         type:
           name: spam-foo
           version: "0.4"
+        input:
+          type: workflow-input
+          path: $.bar
         timeout: 5
         task_list: eggs
         dependencies:

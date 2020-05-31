@@ -13,6 +13,10 @@
                         "name": "spam-foo",
                         "version": "0.3"
                     },
+                    "input": {
+                        "type": "workflow-input",
+                        "path": "$.foo"
+                    },
                     "heartbeat": 60,
                     "timeout": 86400,
                     "task_list": "eggs",
@@ -24,6 +28,10 @@
                         "name": "spam-bar",
                         "version": "0.1"
                     },
+                    "input": {
+                        "type": "workflow-input",
+                        "path": "$.bar"
+                    },
                     "heartbeat": 60,
                     "timeout": 86400,
                     "dependencies": ["foo"]
@@ -33,6 +41,10 @@
                     "type": {
                         "name": "spam-foo",
                         "version": "0.3"
+                    },
+                    "input": {
+                        "type": "workflow-input",
+                        "path": "$.yay"
                     },
                     "heartbeat": 60,
                     "timeout": 86400,
