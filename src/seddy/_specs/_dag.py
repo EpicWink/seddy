@@ -175,7 +175,7 @@ class Object(TaskInput):
 
 
 @dataclasses.dataclass
-class Task:  # TODO: unit-test
+class ActivityTask:  # TODO: unit-test
     """DAG-type workflow activity task specification.
 
     Args:
@@ -208,7 +208,7 @@ class Task:  # TODO: unit-test
         return {"name": self.name, "version": self.version}
 
     @classmethod
-    def from_spec(cls, spec: t.Dict[str, t.Any]) -> "Task":
+    def from_spec(cls, spec: t.Dict[str, t.Any]) -> "ActivityTask":
         """Construct registration configuration from specification.
 
         Args:
@@ -227,6 +227,46 @@ class Task:  # TODO: unit-test
             kwargs["task_list"] = spec["task_list"]
         if "priority" in spec:
             kwargs["priority"] = spec["priority"]
+        if "dependencies" in spec:
+            kwargs["dependencies"] = spec["dependencies"]
+        return cls(*args, **kwargs)
+
+
+@dataclasses.dataclass
+class LambdaTask:  # TODO: unit-test
+    """DAG-type workflow Lambda task specification.
+
+    Args:
+        id: task ID, must be unique within a workflow execution and
+            without ':', '/', '|', 'arn' or any control character
+        name: Lambda function name or ARN
+        input: task input specification
+        timeout: task time-out (seconds), or "None" for unlimited
+        dependencies: IDs of task’s dependencies
+    """
+
+    id: str
+    name: str
+    input: t.Union[NoInput, Constant, WorkflowInput, DependencyResult, Object] = None
+    timeout: t.Union[int, str] = None
+    dependencies: t.List[str] = None
+    _input_cls: t.ClassVar = TaskInput
+
+    @classmethod
+    def from_spec(cls, spec: t.Dict[str, t.Any]) -> "LambdaTask":
+        """Construct registration configuration from specification.
+
+        Args:
+            spec: workflow registration configuration specification
+        """
+
+        assert spec["type"]["lambda"]
+        args = (spec["id"], spec["type"]["name"])
+        kwargs = {}
+        if "input" in spec:
+            kwargs["input"] = cls._input_cls.from_spec(spec["input"])
+        if "timeout" in spec:
+            kwargs["timeout"] = spec["timeout"]
         if "dependencies" in spec:
             kwargs["dependencies"] = spec["dependencies"]
         return cls(*args, **kwargs)
@@ -345,14 +385,12 @@ class DAGBuilder(_base.DecisionsBuilder):
         self._error_events = []
         self._ready_activities = set()
 
-    def _schedule_task(self, activity_task: Task):
+    def _build_task_input(
+        self, activity_task: t.Union[ActivityTask, LambdaTask]
+    ) -> t.Any:
         workflow_started_event = self.task["events"][0]
         assert workflow_started_event["eventType"] == "WorkflowExecutionStarted"
         attrs = workflow_started_event["workflowExecutionStartedEventAttributes"]
-        decision_attributes = {
-            "activityId": activity_task.id,
-            "activityType": activity_task.type,
-        }
 
         # Build input
         input_spec = activity_task.input
@@ -366,7 +404,15 @@ class DAGBuilder(_base.DecisionsBuilder):
             d_attrs = events[-1].get("activityTaskCompletedEventAttributes", {})
             if "result" in d_attrs:
                 activity_results[activity_task_id] = json.loads(d_attrs["result"])
-        input_ = _build_activity_input(input_spec, workflow_input, activity_results)
+        return _build_activity_input(input_spec, workflow_input, activity_results)
+
+    def _schedule_activity_task(self, activity_task: ActivityTask) -> None:
+        decision_attributes = {
+            "activityId": activity_task.id,
+            "activityType": activity_task.type,
+        }
+
+        input_ = self._build_task_input(activity_task)
         if input_ is not _sentinel:
             decision_attributes["input"] = json.dumps(input_)
 
@@ -383,6 +429,22 @@ class DAGBuilder(_base.DecisionsBuilder):
         decision = {
             "decisionType": "ScheduleActivityTask",
             "scheduleActivityTaskDecisionAttributes": decision_attributes,
+        }
+        self.decisions.append(decision)
+
+    def _schedule_lambda(self, activity_task: LambdaTask) -> None:
+        decision_attributes = {
+            "activityId": activity_task.id,
+            "name": activity_task.name,
+        }
+        input_ = self._build_task_input(activity_task)
+        if input_ is not _sentinel:
+            decision_attributes["input"] = json.dumps(input_)
+        if activity_task.timeout is not None:
+            decision_attributes["startToCloseTimeout"] = str(activity_task.timeout)
+        decision = {
+            "decisionType": "ScheduleLambdaFunction",
+            "scheduleLambdaFunctionDecisionAttributes": decision_attributes,
         }
         self.decisions.append(decision)
 
@@ -553,6 +615,14 @@ class DAGBuilder(_base.DecisionsBuilder):
         )
         self._new_events = events
 
+    def _schedule_task(self, task: t.Union[ActivityTask, LambdaTask]) -> None:
+        if isinstance(task, ActivityTask):
+            return self._schedule_activity_task(task)
+        elif isinstance(task, LambdaTask):
+            return self._schedule_lambda(task)
+        else:
+            raise TypeError(task)
+
     def _schedule_tasks(self):
         for task_id in self._ready_activities:
             task = next(ts for ts in self.workflow.task_specs if ts.id == task_id)
@@ -592,17 +662,36 @@ class DAGWorkflow(_base.Workflow):
 
     spec_type = "dag"
     decisions_builder = DAGBuilder
-    _task_cls = Task
 
-    def __init__(self, name, version, task_specs: t.List[Task], description=None):
+    def __init__(
+        self,
+        name,
+        version,
+        task_specs: t.List[t.Union[ActivityTask, LambdaTask]],
+        description=None
+    ):
         super().__init__(name, version, description)
         self.task_specs = task_specs
         self.dependants = {None: []}
 
+    @staticmethod
+    def _task_from_spec(spec: t.Dict[str, t.Any]) -> t.Union[ActivityTask, LambdaTask]:
+        """Deserialise task-specification, choosing type.
+
+        Args:
+            spec: task specification
+
+        Returns:
+            task specification
+        """
+
+        cls = LambdaTask if spec["type"].get("lambda") else ActivityTask
+        return cls.from_spec(spec)
+
     @classmethod
     def _args_from_spec(cls, spec):
         args, kwargs = super()._args_from_spec(spec)
-        tasks = [cls._task_cls.from_spec(s) for s in spec["tasks"]]
+        tasks = [cls._task_from_spec(s) for s in spec["tasks"]]
         args += (tasks,)
         return args, kwargs
 

@@ -1518,21 +1518,30 @@ class TestWorkflow:
                 "type": {"name": "spam-bar", "version": "0.1"},
                 "heartbeat": "60",
                 "timeout": "86400",
-                "dependencies": "foo",
+                "dependencies": ["foo"],
             },
             {
                 "id": "yay",
                 "type": {"name": "spam-foo", "version": "0.3"},
                 "heartbeat": "60",
                 "timeout": "86400",
-                "dependencies": "foo",
+                "dependencies": ["foo"],
+            },
+            {
+                "id": "tin",
+                "type": {"name": "arn:tin", "lambda": True},
+                "timeout": "86400",
+                "dependencies": ["bar", "yay"],
             },
         ]
 
     @pytest.fixture
     def task_specs(self, task_spec_dicts):
         """Example deserialised DAG-type workflow tasks specifications."""
-        return [_dag.Task.from_spec(s) for s in task_spec_dicts]
+        return (
+            [_dag.ActivityTask.from_spec(s) for s in task_spec_dicts[:3]]
+            + [_dag.LambdaTask.from_spec(task_spec_dicts[3])]
+        )
 
     @pytest.fixture
     def spec(self, task_spec_dicts):
@@ -1575,6 +1584,7 @@ class TestWorkflow:
         assert instance.dependants == {
             None: ["foo"],
             "foo": ["bar", "yay"],
-            "bar": [],
-            "yay": [],
+            "bar": ["tin"],
+            "yay": ["tin"],
+            "tin": [],
         }
