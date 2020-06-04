@@ -153,7 +153,7 @@ class Decider:
             self._run_uncaught()
         except KeyboardInterrupt:
             logger.info("Quitting due to keyboard-interrupt")
-        if self._future.running():
+        if self._future and self._future.running():
             logger.log(25, "Waiting on current decision task to be handled")
             self._future.result()
 
