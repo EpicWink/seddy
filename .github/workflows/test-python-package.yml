@@ -26,7 +26,9 @@ jobs:
     - name: Update pip
       run: pip install -U pip
     - name: Install package
-      run: pip install .
+      run: |
+        apt-get update && apt-get install -y git
+        pip --no-cache-dir install .
     - name: Lint with black
       run: |
         pip install black
