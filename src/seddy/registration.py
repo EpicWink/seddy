@@ -77,7 +77,10 @@ def register_workflow(workflow: _specs.Workflow, domain: str, client):
 
     # Register
     client.register_workflow_type(
-        domain=domain, name=workflow.name, version=workflow.version, **kwargs,
+        domain=domain,
+        name=workflow.name,
+        version=workflow.version,
+        **kwargs,
     )
 
 
