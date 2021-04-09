@@ -252,46 +252,21 @@ def _get_item_jsonpath(path: str, obj) -> t.Any:
         ValueError: invalid path
     """
 
+    import jmespath.visitor
+
+    class TreeInterpreter(jmespath.visitor.TreeInterpreter):
+        def visit_field(self, node, value):
+            return value[node["value"]]
+
+        visit_index = visit_field
+
     if path[0] != "$":
         raise ValueError("invalid path (must start at root): %s" % path)
-
-    indices = []
-    chars = []
-    state = None
-    for char in path[1:]:
-        if char in ".[":
-            if state:
-                if state != ".":
-                    raise ValueError("invalid path (missing closing ']'): %s" % path)
-                elif not chars:
-                    raise ValueError("invalid path (empty key): %s" % path)
-                indices.append("".join(chars))
-            chars = []
-            state = char
-        elif char == "]":
-            if state != "[":
-                raise ValueError("invalid path (invalid key): %s" % path)
-            elif not chars:
-                raise ValueError("invalid path (empty key): %s" % path)
-            index = int("".join(chars))
-            indices.append(index)
-            chars = []
-            state = None
-        elif char not in _jsonpath_characters:
-            raise ValueError("invalid path (illegal characters): %s" % path)
-        else:
-            if not state:
-                raise ValueError("invalid path (missing '.' or '['): %s" % path)
-            chars.append(char)
-    if state == "[":
-        raise ValueError("invalid path (missing closing ']'): %s" % path)
-    elif state == ".":
-        indices.append("".join(chars))
-
-    item = obj
-    for index in indices:
-        item = item[index]
-    return item
+    path = "o" + path[1:]
+    obj = {"o": obj}
+    parsed = jmespath.compile(path)
+    interpreter = TreeInterpreter()
+    return interpreter.visit(parsed.parsed, obj)
 
 
 def _build_activity_input(

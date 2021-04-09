@@ -70,7 +70,6 @@ def test_get_item_jsonpath(path, obj, exp):
         "$.spam[0].eggs$.swallow[2]",
         "$.spam[0]].eggs.swallow[2]",
         "$.spam[[0].eggs.swallow[2]",
-        "$.spam[0].eggs.swallow[*]",
     ],
 )
 def test_get_item_jsonpath_bad_path(path):
