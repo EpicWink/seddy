@@ -1,6 +1,6 @@
 pytest
 pytest-cov
 coloredlogs
-moto
+moto[swf] ~= 2.0
 pyyaml
 python-json-logger

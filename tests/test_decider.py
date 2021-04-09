@@ -57,31 +57,8 @@ class TestDecider:
         assert isinstance(instance.client, botocore_client.BaseClient)
         assert instance.identity == "abcd1234"
 
-    @pytest.fixture
-    def patch_moto_swf_decision_task(self):
-        """Temporarily patch ``moto`` to fix decision-task contents."""
-        from moto.swf.models import workflow_execution as swf_models
-
-        class DecisionTask(swf_models.DecisionTask):
-            def __init__(self, workflow_execution, scheduled_event_id):
-                super().__init__(workflow_execution, scheduled_event_id)
-                self.previous_started_event_id = None
-
-            def to_full_dict(self, reverse_order=False):
-                hsh = super().to_full_dict(reverse_order=reverse_order)
-                if (
-                    "previousStartedEventId" in hsh
-                    and self.previous_started_event_id is None
-                ):
-                    hsh.pop("previousStartedEventId")
-                return hsh
-
-        task_patch = mock.patch.object(swf_models, "DecisionTask", DecisionTask)
-        with task_patch:
-            yield
-
     @moto.mock_swf
-    def test_poll_for_decision_task(self, instance, patch_moto_swf_decision_task):
+    def test_poll_for_decision_task(self, instance):
         # Setup environment
         instance.client.register_domain(
             name="spam", workflowExecutionRetentionPeriodInDays="2"
@@ -219,24 +196,8 @@ class TestDecider:
         # Check result
         assert e.value.args[0] == {"name": "bar", "version": "0.43"}
 
-    @pytest.fixture
-    def patch_moto_swf(self):
-        """Temporarily patch ``moto`` to fix closed execution info."""
-        from moto.swf import models
-
-        class WorkflowExecution(models.WorkflowExecution):
-            def to_full_dict(self):
-                hsh = super().to_full_dict()
-                if self.execution_status == "CLOSED":
-                    hsh["executionInfo"]["closeStatus"] = self.close_status
-                    hsh["executionInfo"]["closeTimestamp"] = self.close_timestamp
-                return hsh
-
-        with mock.patch.object(models, "WorkflowExecution", WorkflowExecution):
-            yield
-
     @moto.mock_swf
-    def test_respond_decision_task_completed(self, instance, patch_moto_swf):
+    def test_respond_decision_task_completed(self, instance):
         # Setup environment
         instance.client.register_domain(
             name="spam", workflowExecutionRetentionPeriodInDays="2"

@@ -38,71 +38,8 @@ def test_list_workflows():
     assert res == {("foo", "1.0"): False, ("foo", "1.1"): True, ("bar", "0.42"): True}
 
 
-@pytest.fixture
-def patch_moto_swf_register():
-    """Temporarily patch ``moto`` to fix workflow undeprecation."""
-    from moto.swf import models as swf_models
-    from moto.swf import responses as swf_responses
-    from moto.swf import urls as swf_urls
-
-    class WorkflowType(swf_models.WorkflowType):
-        @property
-        def _configuration_keys(self):
-            new_keys = ["defaultTaskPriority", "defaultLambdaRole"]
-            return super()._configuration_keys + new_keys
-
-    class SWFResponse(swf_responses.SWFResponse):
-        def register_workflow_type(self):
-            domain = self._params["domain"]
-            name = self._params["name"]
-            version = self._params["version"]
-            task_list_d = self._params.get("defaultTaskList")
-            task_list = task_list_d.get("name") if task_list_d else None
-            child_policy = self._params.get("defaultChildPolicy")
-            task_timeout = self._params.get("defaultTaskStartToCloseTimeout")
-            execution_timeout = self._params.get("defaultExecutionStartToCloseTimeout")
-            task_priority = self._params.get("defaultTaskPriority")
-            lambda_role = self._params.get("defaultLambdaRole")
-            description = self._params.get("description")
-
-            self._check_string(domain)
-            self._check_string(name)
-            self._check_string(version)
-            self._check_none_or_string(task_list)
-            self._check_none_or_string(child_policy)
-            self._check_none_or_string(task_timeout)
-            self._check_none_or_string(execution_timeout)
-            self._check_none_or_string(task_priority)
-            self._check_none_or_string(lambda_role)
-            self._check_none_or_string(description)
-
-            self.swf_backend.register_type(
-                "workflow",
-                domain,
-                name,
-                version,
-                task_list=task_list,
-                default_child_policy=child_policy,
-                default_task_start_to_close_timeout=task_timeout,
-                default_execution_start_to_close_timeout=execution_timeout,
-                default_task_priority=task_priority,
-                default_lambda_role=lambda_role,
-                description=description,
-            )
-            return ""
-
-    swf_types_patch = mock.patch.dict(
-        swf_models.KNOWN_SWF_TYPES, {"workflow": WorkflowType}
-    )
-    url_paths_patch = mock.patch.dict(
-        swf_urls.url_paths, {"{0}/$": SWFResponse.dispatch}
-    )
-    with swf_types_patch, url_paths_patch:
-        yield
-
-
 @moto.mock_swf
-def test_register_workflow(patch_moto_swf_register):
+def test_register_workflow():
     """Test workflow registration."""
     # Setup environment
     client = boto3.client("swf", region_name="us-east-1")
@@ -158,44 +95,8 @@ def test_deprecate_workflow():
     assert workflow_info["typeInfo"]["status"] == "DEPRECATED"
 
 
-@pytest.fixture
-def patch_moto_swf_undeprecate():
-    """Temporarily patch ``moto`` to fix workflow undeprecation."""
-    from moto.swf import models as swf_models
-    from moto.swf import responses as swf_responses
-    from moto.swf import urls as swf_urls
-
-    class SWFBackend(swf_models.SWFBackend):
-        def undeprecate_type(self, kind, domain_name, name, version):
-            domain = self._get_domain(domain_name)
-            _type = domain.get_type(kind, name, version)
-            if _type.status == "REGISTERED":
-                raise swf_models.SWFTypeAlreadyExistsFault(_type)
-            _type.status = "REGISTERED"
-
-    class SWFResponse(swf_responses.SWFResponse):
-        def undeprecate_workflow_type(self):
-            domain = self._params["domain"]
-            name = self._params["workflowType"]["name"]
-            version = self._params["workflowType"]["version"]
-            self._check_string(domain)
-            self._check_string(name)
-            self._check_string(version)
-            self.swf_backend.undeprecate_type("workflow", domain, name, version)
-            return ""
-
-    swf_backends_patch = mock.patch.dict(
-        swf_models.swf_backends, {r: SWFBackend(r) for r in swf_models.swf_backends}
-    )
-    url_paths_patch = mock.patch.dict(
-        swf_urls.url_paths, {"{0}/$": SWFResponse.dispatch}
-    )
-    with swf_backends_patch, url_paths_patch:
-        yield
-
-
 @moto.mock_swf
-def test_undeprecate_workflow(patch_moto_swf_undeprecate):
+def test_undeprecate_workflow():
     """Test workflow undeprecation."""
     # Setup environment
     client = boto3.client("swf", region_name="us-east-1")
@@ -219,7 +120,7 @@ def test_undeprecate_workflow(patch_moto_swf_undeprecate):
 
 
 @moto.mock_swf
-def test_register_workflows(patch_moto_swf_undeprecate):
+def test_register_workflows():
     """Test workflows registration syncing."""
     # Setup environment
     client = boto3.client("swf", region_name="us-east-1")
