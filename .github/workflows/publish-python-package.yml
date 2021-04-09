@@ -15,8 +15,8 @@ jobs:
       run: pip install -U pip
     - name: Build package
       run: |
-        pip install setuptools wheel
-        python setup.py sdist bdist_wheel
+        pip install build
+        python -m build --sdist --wheel .
     - name: Publish package
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
