@@ -7,27 +7,25 @@ We'll use `moto <https://github.com/spulec/moto>`_, a tool which mocks out SWF.
 
 .. warning::
 
-   ``moto`` v1.3.14 doesn't correctly support SWF. In particular:
-
-   * Task-polling returns instantly
-   * No-task result from task-polling is missing ``taskToken``, so ``seddy decider``
-     will crash whenever there is no result
-   * Decision tasks have incorrect value for ``previousStartedEventId``, so ``seddy
-     decider`` will crash after the two decision tasks
-
-   Use a development version of ``moto`` (from source) until v1.3.15 is released.
-   These are not issues when using ``seddy`` for real
+   ``moto`` v1.3.16 is required to correctly mock SWF (however, unlike using AWS for
+   real, task-polling returns instantly).
 
 Set-up
 ------
 
-Install Moto, AWS CLI, `PyYaml <https://github.com/yaml/pyyaml>`_ and seddy
+Install `Moto <http://docs.getmoto.org/en/latest/>`_,
+`AWS CLI <https://aws.amazon.com/cli/>`_,
+`PyYaml <https://github.com/yaml/pyyaml>`_ and seddy
 
 .. code-block:: shell
 
-   pip install moto[server] awscli pyyaml seddy
+   pip install moto[server,swf] pyyaml seddy
 
 .. _env-vars:
+
+You are free to use whichever method you like to install AWS CLI, for example installing
+v1 via pip (``pip install awscli``) or using the Docker image (``docker pull
+amazon/aws-cli:latest``, then ``alias aws='docker run --rm amazon/aws-cli:latest'``)
 
 Environment variables
 ^^^^^^^^^^^^^^^^^^^^^
