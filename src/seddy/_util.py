@@ -5,8 +5,6 @@ import sys
 import typing as t
 import logging as lg
 
-import boto3
-
 logger = lg.getLogger(__package__)
 AWS_SWF_ENDPOINT_URL = os.environ.get("AWS_SWF_ENDPOINT_URL")
 LOGGING_LEVELS = {
@@ -110,6 +108,8 @@ def get_swf_client():
     Returns:
         botocore.client.BaseClient: SWF client
     """
+
+    import boto3
 
     logger.debug(
         "Creating SWF client with endpoint URL: %s", AWS_SWF_ENDPOINT_URL or "<default>"
