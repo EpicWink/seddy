@@ -472,6 +472,8 @@ def _build_activity_input(
 class DAGBuilder(_base.DecisionsBuilder):
     """SWF decision builder from DAG-type workflow specification."""
 
+    _ready_activities: t.List[str]
+
     def __init__(self, workflow: "DAGWorkflow", task):
         super().__init__(workflow, task)
         self.workflow = workflow
@@ -479,7 +481,7 @@ class DAGBuilder(_base.DecisionsBuilder):
         self._activity_task_events = {at.id: [] for at in workflow.task_specs}
         self._new_events = None
         self._error_events = []
-        self._ready_activities = set()
+        self._ready_activities = []
 
     def _schedule_task(self, activity_task: Task):
         # Get workflow-start event
@@ -510,7 +512,11 @@ class DAGBuilder(_base.DecisionsBuilder):
             and activity_task.skip_if.is_true(workflow_input, activity_results)
         ):
             logger.info(f"Skipping activity task '{activity_task.id}', as requested")
-            self._process_completed_activity_task(activity_task.id)
+            if not any(
+                self._activity_task_events[d]
+                for d in self.workflow.dependants[activity_task.id]
+            ):
+                self._process_completed_activity_task(activity_task.id)
             return
 
         # Build input
@@ -570,8 +576,8 @@ class DAGBuilder(_base.DecisionsBuilder):
                 if not events or events[-1]["eventType"] != "ActivityTaskCompleted":
                     dependencies_satisfied = False
                     break
-            if dependencies_satisfied:
-                self._ready_activities.add(task.id)
+            if dependencies_satisfied and task.id not in self._ready_activities:
+                self._ready_activities.append(task.id)
 
     def _complete_workflow(self):
         tasks_complete = True
@@ -635,7 +641,9 @@ class DAGBuilder(_base.DecisionsBuilder):
 
     def _schedule_initial_activity_tasks(self):
         for task_id in self.workflow.dependants[None]:
-            self._ready_activities.add(task_id)
+            if task_id in self._ready_activities:
+                continue
+            self._ready_activities.append(task_id)
 
     def _process_error_events(self):
         if not self._error_events:
