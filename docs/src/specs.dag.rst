@@ -67,6 +67,7 @@ specification (aka input-spec), **type** can have one of the following values:
 * **workflow-input**: the activity will be passed a portion of the workflow input,
   according to **path** in the input-spec (see :ref:`json-path` for its syntax).
   **path** can be omitted, defaulting to ``"$"`` (the entire workflow input).
+  Specify **default** to allow missing values, instead using the value of **default**
 
   .. code-block:: yaml
 
@@ -91,6 +92,7 @@ specification (aka input-spec), **type** can have one of the following values:
   input-spec, according to **path** in the input-spec (see :ref:`json-path` for its
   syntax). **path** can be omitted, defaulting to ``"$"`` (the entire dependency
   result).
+  Specify **default** to allow missing values, instead using the value of **default**
 
   .. code-block:: yaml
 
@@ -144,7 +146,7 @@ specification (aka input-spec), **type** can have one of the following values:
            value: 42
 
 Example
--------
+^^^^^^^
 
 .. code-block:: yaml
 

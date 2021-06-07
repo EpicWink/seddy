@@ -138,12 +138,15 @@ class Constant(TaskInput):
 class WorkflowInput(TaskInput):
     type: t.ClassVar = "workflow-input"
     path: str = "$"
+    default: t.Any = _sentinel
 
     @classmethod
     def from_spec(cls, spec) -> "WorkflowInput":
         kwargs = {}
         if "path" in spec:
             kwargs["path"] = spec["path"]
+        if "default" in spec:
+            kwargs["default"] = spec["default"]
         return cls(**kwargs)
 
 
@@ -152,12 +155,15 @@ class DependencyResult(TaskInput):
     type: t.ClassVar = "dependency-result"
     id: t.Any
     path: str = "$"
+    default: t.Any = _sentinel
 
     @classmethod
     def from_spec(cls, spec) -> "DependencyResult":
         kwargs = {}
         if "path" in spec:
             kwargs["path"] = spec["path"]
+        if "default" in spec:
+            kwargs["default"] = spec["default"]
         return cls(spec["id"], **kwargs)
 
 
@@ -237,13 +243,14 @@ def _get(item_id, items, id_key):
     return next(item for item in items if item[id_key] == item_id)
 
 
-def _get_item_jsonpath(path: str, obj) -> t.Any:
+def _get_item_jsonpath(path: str, obj, default: t.Any = _sentinel) -> t.Any:
     """Get a child item from an object.
 
     Args:
         path: path to child item, using basic single-valued JSONPath
             syntax
         obj: object to get child item from
+        default: default value if missing
 
     Returns:
         pointed-to child item
@@ -290,7 +297,12 @@ def _get_item_jsonpath(path: str, obj) -> t.Any:
 
     item = obj
     for index in indices:
-        item = item[index]
+        try:
+            item = item[index]
+        except (KeyError, IndexError):
+            if default != _sentinel:
+                return default
+            raise
     return item
 
 
@@ -317,11 +329,11 @@ def _build_activity_input(
         return input_spec.value
     if isinstance(input_spec, WorkflowInput):
         path = input_spec.path
-        return _get_item_jsonpath(path, workflow_input)
+        return _get_item_jsonpath(path, workflow_input, input_spec.default)
     if isinstance(input_spec, DependencyResult):
         path = input_spec.path
         dependency_result = activity_results[input_spec.id]
-        return _get_item_jsonpath(path, dependency_result)
+        return _get_item_jsonpath(path, dependency_result, input_spec.default)
     if isinstance(input_spec, Object):
         input_ = {}
         for key, subspec in input_spec.items.items():
