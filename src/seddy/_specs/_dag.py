@@ -593,6 +593,7 @@ class DAGWorkflow(_base.Workflow):
     spec_type = "dag"
     decisions_builder = DAGBuilder
     _task_cls = Task
+    dependants: t.Dict[t.Union[None, str], t.List[str]]
 
     def __init__(self, name, version, task_specs: t.List[Task], description=None):
         super().__init__(name, version, description)

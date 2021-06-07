@@ -151,7 +151,7 @@ class Workflow(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def decisions_builder(self) -> DecisionsBuilder:  # pragma: no cover
+    def decisions_builder(self) -> t.Type[DecisionsBuilder]:  # pragma: no cover
         raise NotImplementedError
 
     @property
