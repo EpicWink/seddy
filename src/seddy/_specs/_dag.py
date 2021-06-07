@@ -1,5 +1,6 @@
 """SWF decisions making."""
 
+import abc
 import json
 import string
 import dataclasses
@@ -181,6 +182,124 @@ class Object(TaskInput):
 
 
 @dataclasses.dataclass
+class Condition(metaclass=abc.ABCMeta):  # TODO: unit-test
+    @staticmethod
+    def from_spec(spec: t.Dict[str, t.Any]) -> "Condition":
+        for cls in [Equal, NotEqual, LessThan, LessThanOrEqual, In, And, Or, Not]:
+            if cls.type == spec["type"]:
+                return cls.from_spec(spec)
+        raise ValueError(spec["type"])
+
+    @abc.abstractmethod
+    def is_true(
+        self,
+        workflow_input: t.Union[t.Dict[str, t.Any], None],
+        activity_results: t.Dict[str, t.Any],
+    ) -> bool:
+        raise NotImplementedError
+
+
+@dataclasses.dataclass
+class ComparisonBase(Condition, metaclass=abc.ABCMeta):  # TODO: unit-test
+    lhs: TaskInput
+    rhs: TaskInput
+
+    @classmethod
+    def from_spec(cls, spec):
+        lhs = TaskInput.from_spec(spec["lhs"])
+        rhs = TaskInput.from_spec(spec["rhs"])
+        return cls(lhs, rhs)
+
+    def is_true(self, workflow_input, activity_results) -> bool:
+        lhs = _build_activity_input(self.lhs, workflow_input, activity_results)
+        rhs = _build_activity_input(self.rhs, workflow_input, activity_results)
+        return self._compare(lhs, rhs)
+
+    @staticmethod
+    @abc.abstractmethod
+    def _compare(lhs: t.Any, rhs: t.Any) -> bool:  # TODO: unit-test
+        raise NotImplementedError
+
+
+@dataclasses.dataclass
+class Equal(ComparisonBase):  # TODO: unit-test
+    type: t.ClassVar = "="
+    _compare = staticmethod(lambda l, r: l == r)
+
+
+@dataclasses.dataclass
+class NotEqual(ComparisonBase):  # TODO: unit-test
+    type: t.ClassVar = "!="
+    _compare = staticmethod(lambda l, r: l != r)
+
+
+@dataclasses.dataclass
+class LessThan(ComparisonBase):  # TODO: unit-test
+    type: t.ClassVar = "<"
+    _compare = staticmethod(lambda l, r: l < r)
+
+
+@dataclasses.dataclass
+class LessThanOrEqual(ComparisonBase):  # TODO: unit-test
+    type: t.ClassVar = "<="
+    _compare = staticmethod(lambda l, r: l <= r)
+
+
+@dataclasses.dataclass
+class In(ComparisonBase):  # TODO: unit-test
+    type: t.ClassVar = "in"
+    _compare = staticmethod(lambda l, r: l in r)
+
+
+@dataclasses.dataclass
+class BinaryLogicalBase(Condition, metaclass=abc.ABCMeta):  # TODO: unit-test
+    lhs: Condition
+    rhs: Condition
+
+    @classmethod
+    def from_spec(cls, spec):
+        lhs = Condition.from_spec(spec["lhs"])
+        rhs = Condition.from_spec(spec["rhs"])
+        return cls(lhs, rhs)
+
+    def is_true(self, workflow_input, activity_results) -> bool:
+        lhs = self.lhs.is_true(workflow_input, activity_results)
+        rhs = self.rhs.is_true(workflow_input, activity_results)
+        return self._combine(lhs, rhs)
+
+    @staticmethod
+    @abc.abstractmethod
+    def _combine(lhs: t.Any, rhs: t.Any) -> bool:
+        raise NotImplementedError
+
+
+@dataclasses.dataclass
+class And(BinaryLogicalBase):  # TODO: unit-test
+    type: t.ClassVar = "and"
+    _combine = staticmethod(lambda l, r: l and r)
+
+
+@dataclasses.dataclass
+class Or(BinaryLogicalBase):  # TODO: unit-test
+    type: t.ClassVar = "or"
+    _combine = staticmethod(lambda l, r: l or r)
+
+
+@dataclasses.dataclass
+class Not(Condition):  # TODO: unit-test
+    type: t.ClassVar = "not"
+    value: Condition
+
+    @classmethod
+    def from_spec(cls, spec):
+        value = Condition.from_spec(spec["value"])
+        return cls(value)
+
+    def is_true(self, workflow_input, activity_results) -> bool:
+        return not self.value.is_true(workflow_input, activity_results)
+
+
+@dataclasses.dataclass
 class Task:  # TODO: unit-test
     """DAG-type workflow activity task specification.
 
@@ -195,6 +314,7 @@ class Task:  # TODO: unit-test
         task_list: task-list to schedule task on
         priority: task priority
         dependencies: IDs of task’s dependencies
+        skip_if: condition to skip task
     """
 
     id: str
@@ -206,7 +326,9 @@ class Task:  # TODO: unit-test
     task_list: str = None
     priority: int = None
     dependencies: t.List[str] = None
+    skip_if: Condition = None
     _input_cls: t.ClassVar = TaskInput
+    _condition_cls: t.ClassVar = Condition
 
     @property
     def type(self) -> t.Dict[str, str]:
@@ -235,6 +357,8 @@ class Task:  # TODO: unit-test
             kwargs["priority"] = spec["priority"]
         if "dependencies" in spec:
             kwargs["dependencies"] = spec["dependencies"]
+        if "skip_if" in spec:
+            kwargs["skip_if"] = cls._condition_cls.from_spec(spec["skip_if"])
         return cls(*args, **kwargs)
 
 
@@ -358,6 +482,7 @@ class DAGBuilder(_base.DecisionsBuilder):
         self._ready_activities = set()
 
     def _schedule_task(self, activity_task: Task):
+        # Get workflow-start event
         workflow_started_event = self.task["events"][0]
         assert workflow_started_event["eventType"] == "WorkflowExecutionStarted"
         attrs = workflow_started_event["workflowExecutionStartedEventAttributes"]
@@ -366,7 +491,7 @@ class DAGBuilder(_base.DecisionsBuilder):
             "activityType": activity_task.type,
         }
 
-        # Build input
+        # Get workflow input and activity task results
         input_spec = activity_task.input
         workflow_input = json.loads(attrs.get("input", "null"))
         activity_results = {}
@@ -378,6 +503,17 @@ class DAGBuilder(_base.DecisionsBuilder):
             d_attrs = events[-1].get("activityTaskCompletedEventAttributes", {})
             if "result" in d_attrs:
                 activity_results[activity_task_id] = json.loads(d_attrs["result"])
+
+        # Skip if required
+        if (
+            activity_task.skip_if
+            and activity_task.skip_if.is_true(workflow_input, activity_results)
+        ):
+            logger.info(f"Skipping activity task '{activity_task.id}', as requested")
+            self._process_completed_activity_task(activity_task.id)
+            return
+
+        # Build input
         input_ = _build_activity_input(input_spec, workflow_input, activity_results)
         if input_ is not _sentinel:
             decision_attributes["input"] = json.dumps(input_)
@@ -419,7 +555,10 @@ class DAGBuilder(_base.DecisionsBuilder):
     def _process_activity_task_completed_event(self, event: t.Dict[str, t.Any]):
         scheduled_event = self._scheduled[event["eventId"]]
         attrs = scheduled_event["activityTaskScheduledEventAttributes"]
-        dependants_task = self.workflow.dependants[attrs["activityId"]]
+        self._process_completed_activity_task(attrs["activityId"])
+
+    def _process_completed_activity_task(self, activity_id: str) -> None:
+        dependants_task = self.workflow.dependants[activity_id]
 
         for activity_task_id in dependants_task:
             assert not self._activity_task_events[activity_task_id]

@@ -27,6 +27,8 @@ A DAG-type workflow (element of ``workflows``) has specification
    * **task_list** (*string*): optional, task-list to schedule task on
    * **priority** (*int*): optional, task priority
    * **dependencies** (*array[string]*): optional, IDs of task's dependents
+   * **skip_if** (*object*): optional, skip task if workflow state satisfies condition.
+     See :ref:`dag-condition` for more details
 
 .. _dag-input:
 
@@ -181,3 +183,93 @@ Example
        task_list: eggs
        dependencies:
        - foo
+
+
+.. _dag-condition:
+
+Condition
+---------
+
+Condition objects represent a logical expression, and their form depends on the value of
+their **type**, which can be one of the following:
+
+* **=**, **!=**, **<**, **<=**, **in**: (Pythonic) value comparison, with sibling'
+  properties:
+
+  * **lhs** (*object*): left-hand-side value specification, as defined in
+    :ref:`dag-input`
+  * **rhs** (*object*): right-hand-side value specification, as defined in
+    :ref:`dag-input`
+
+  .. code-block:: yaml
+
+     type: '='
+     lhs:
+       type: workflow-input
+       path: $.runSpam
+     rhs:
+       type: constant
+       value: false
+
+  .. code-block:: yaml
+
+     type: in
+     lhs:
+       type: dependency-result
+       id: bar
+       path: $.foo
+     rhs:
+       type: workflow-input
+       path: $.skipFoos
+
+* **and**, **or**: logical combinator, with sibling properties:
+
+  * **lhs** (*object*): left-hand-side condition object
+  * **rhs** (*object*): right-hand-side condition object
+
+  .. code-block:: yaml
+
+     type: or
+     lhs:
+       type: '!='
+       lhs:
+         type: const
+         value: true
+       rhs:
+         type: const
+         value: false
+     rhs:
+       type: and
+       lhs:
+         type: in
+         lhs:
+           type: const
+           value: oof
+         rhs:
+           type: const
+           value: foobar
+       rhs:
+         type: in
+         lhs:
+           type: const
+           value: foo
+         rhs:
+           type: const
+           value:
+             - spam
+             - eggs
+
+* **not**: logical not expression, with notted expression specified as a condition
+  object in **value**.
+
+  .. code-block:: yaml
+
+     type: not
+     value:
+       type: '='
+       lhs:
+         type: const
+         value: true
+       rhs:
+         type: const
+         value: true
