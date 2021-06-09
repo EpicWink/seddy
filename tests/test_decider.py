@@ -49,10 +49,15 @@ class TestDecider:
 
     @pytest.fixture
     def instance(self, workflows_spec_file, aws_environment):
-        return seddy_decider.Decider(workflows_spec_file, "spam", "eggs", "abcd1234")
+        return seddy_decider.Decider(
+            workflows_spec_uri=str(workflows_spec_file),
+            domain="spam",
+            task_list="eggs",
+            identity="abcd1234",
+        )
 
     def test_init(self, instance, workflows_spec_file):
-        assert instance.workflows_spec_file == workflows_spec_file
+        assert instance.workflows_spec_uri == str(workflows_spec_file)
         assert instance.domain == "spam"
         assert instance.task_list == "eggs"
         assert isinstance(instance.client, botocore_client.BaseClient)

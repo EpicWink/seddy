@@ -1,6 +1,5 @@
 """SWF workflow management service."""
 
-import pathlib
 import argparse
 
 import pkg_resources
@@ -25,11 +24,13 @@ def run_app(args: argparse.Namespace):
     if args.command == "decider":
         from . import decider
 
-        decider.run_app(args.workflows_file, args.domain, args.task_list, args.identity)
+        decider.run_app(
+            args.workflows_spec_uri, args.domain, args.task_list, args.identity
+        )
     elif args.command == "register":
         from . import registration
 
-        registration.run_app(args.workflows_file, args.domain)
+        registration.run_app(args.workflows_spec_uri, args.domain)
     else:  # pragma: no cover
         raise ValueError(args.command)
 
@@ -59,7 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
         "decider", help="run SWF decider", description="Run SWF decider."
     )
     decider_parser.add_argument(
-        "workflows_file", type=pathlib.Path, help="workflows specifications file path"
+        "workflows_spec_uri", help="workflows specifications URI"
     )
     decider_parser.add_argument("domain", help="SWF domain")
     decider_parser.add_argument("task_list", help="SWF decider task-list")
@@ -77,7 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Synchronise workflow registration status with SWF.",
     )
     register_parser.add_argument(
-        "workflows_file", type=pathlib.Path, help="workflows specifications file path"
+        "workflows_spec_uri", help="workflows specifications URI"
     )
     register_parser.add_argument("domain", help="SWF domain")
 

@@ -183,7 +183,7 @@ def test_decider(decider_mock, tmp_path, args_extra, decider_args):
 
     # Check application input
     decider_mock.assert_called_once_with(
-        tmp_path / "workflows.json", "spam", "eggs", *decider_args
+        str(tmp_path / "workflows.json"), "spam", "eggs", *decider_args
     )
 
 
@@ -200,4 +200,4 @@ def test_register(tmp_path):
         seddy_main.run_app(args)
 
     # Check application input
-    run_app_mock.assert_called_once_with(tmp_path / "workflows.json", "spam")
+    run_app_mock.assert_called_once_with(str(tmp_path / "workflows.json"), "spam")

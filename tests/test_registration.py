@@ -230,7 +230,7 @@ def test_run_app(tmp_path):
 
     # Run function
     with register_patch:
-        seddy_registration.run_app(workflows_spec_json, "spam")
+        seddy_registration.run_app(str(workflows_spec_json), "spam")
 
     # Check workflow registration configuration
     register_mock.assert_called_once_with(mock.ANY, "spam")

@@ -2,7 +2,6 @@
 
 import uuid
 import socket
-import pathlib
 import typing as t
 import logging as lg
 from concurrent import futures as cf
@@ -22,7 +21,7 @@ class Decider:
     """SWF decider.
 
     Args:
-        workflows_spec_file: workflows specifications file path
+        workflows_spec_uri: workflows specifications URI
         domain: SWF domain to poll in
         task_list: SWF decider task-list
         identity: decider identity, default: automatically generated from
@@ -35,12 +34,12 @@ class Decider:
 
     def __init__(
         self,
-        workflows_spec_file: pathlib.Path,
+        workflows_spec_uri: str,
         domain: str,
         task_list: str,
         identity: str = None,
     ):
-        self.workflows_spec_file = workflows_spec_file
+        self.workflows_spec_uri = workflows_spec_uri
         self.domain = domain
         self.task_list = task_list
         self.client = _util.get_swf_client()
@@ -78,7 +77,7 @@ class Decider:
         name = task["workflowType"]["name"]
         version = task["workflowType"]["version"]
         try:
-            return _specs.get_workflow(name, version, self.workflows_spec_file)
+            return _specs.get_workflow(name, version, self.workflows_spec_uri)
         except _specs.WorkflowNotFound as e:
             raise UnsupportedWorkflow(task["workflowType"]) from e
 
@@ -157,16 +156,16 @@ class Decider:
 
 
 def run_app(
-    workflows_spec_file: pathlib.Path, domain: str, task_list: str, identity: str = None
+    workflows_spec_uri: str, domain: str, task_list: str, identity: str = None
 ):
     """Run decider application.
 
     Arguments:
-        workflows_spec_file: workflows specifications file path
+        workflows_spec_uri: workflows specifications URI
         domain: SWF domain
         task_list: SWF decider task-list
         identity: decider identity, default: automatically generated
     """
 
-    decider = Decider(workflows_spec_file, domain, task_list, identity)
+    decider = Decider(workflows_spec_uri, domain, task_list, identity)
     decider.run()

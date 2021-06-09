@@ -1,6 +1,5 @@
 """SWF workflow registration."""
 
-import pathlib
 import typing as t
 import logging as lg
 
@@ -163,13 +162,13 @@ def register_workflows(workflows: t.List[_specs.Workflow], domain: str):
         _sync_workflow(workflow, domain, existing, client)
 
 
-def run_app(workflows_spec_file: pathlib.Path, domain: str):
+def run_app(workflows_spec_uri: str, domain: str):
     """Run registration synchronisation application.
 
     Arguments:
-        workflows_spec_file: workflows specifications file path
+        workflows_spec_uri: workflows specifications URI
         domain: SWF domain
     """
 
-    workflows = _specs.load_workflows(workflows_spec_file)
+    workflows = _specs.load_workflows(workflows_spec_uri)
     register_workflows(workflows, domain)
