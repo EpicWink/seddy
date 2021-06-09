@@ -10,6 +10,10 @@ from . import Workflow
 logger = lg.getLogger(__package__)
 
 
+class WorkflowNotFound(LookupError):
+    """Workflow not found."""
+
+
 def _construct_workflows(workflows_spec: t.Dict[str, t.Any]) -> t.List[Workflow]:
     """Construct workflows from specification.
 
@@ -79,3 +83,29 @@ def load_workflows(workflows_file: pathlib.Path) -> t.List[Workflow]:
 
     workflows_specs = _load_specs(workflows_file)
     return _construct_workflows(workflows_specs)
+
+
+def get_workflow(
+    name: str,
+    version: str,
+    workflows_spec_file: pathlib.Path,
+) -> Workflow:
+    """Get workflow specification.
+
+    Args:
+        name: workflow name
+        version: workflow version
+        workflows_spec_file: workflows specifications file path
+
+    Returns:
+        workflow specification
+
+    Raises:
+        WorkflowNotFound: if workflow with given name and version not found
+    """
+
+    workflows = load_workflows(workflows_spec_file)
+    try:
+        return next(w for w in workflows if w.name == name and w.version == version)
+    except StopIteration:
+        raise WorkflowNotFound("name=%s, version=%s" % (name, version)) from None

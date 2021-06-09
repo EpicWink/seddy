@@ -75,14 +75,12 @@ class Decider:
             workflow specification
         """
 
-        workflows = _specs.load_workflows(self.workflows_spec_file)
-        workflow_ids = [(w.name, w.version) for w in workflows]
-        task_id = (task["workflowType"]["name"], task["workflowType"]["version"])
+        name = task["workflowType"]["name"]
+        version = task["workflowType"]["version"]
         try:
-            idx = workflow_ids.index(task_id)
-        except ValueError:
-            raise UnsupportedWorkflow(task["workflowType"]) from None
-        return workflows[idx]
+            return _specs.get_workflow(name, version, self.workflows_spec_file)
+        except _specs.WorkflowNotFound as e:
+            raise UnsupportedWorkflow(task["workflowType"]) from e
 
     def _respond_decision_task_completed(
         self, decisions: t.List[t.Dict[str, t.Any]], task: t.Dict[str, t.Any]

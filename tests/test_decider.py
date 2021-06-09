@@ -7,6 +7,7 @@ from concurrent import futures as cf
 
 from seddy import decider as seddy_decider
 from seddy import _specs as seddy_specs
+from seddy._specs import _io as seddy_specs_io
 import moto
 import pytest
 from botocore import client as botocore_client
@@ -123,7 +124,7 @@ class TestDecider:
     def test_get_workflow(self, instance, workflow_mocks):
         # Setup environment
         load_mock = mock.Mock(return_value=workflow_mocks)
-        load_patch = mock.patch.object(seddy_specs, "load_workflows", load_mock)
+        load_patch = mock.patch.object(seddy_specs_io, "load_workflows", load_mock)
 
         # Build input
         task = {
@@ -178,7 +179,7 @@ class TestDecider:
         """Check workflow-get raises for unsupported workflows."""
         # Setup environment
         load_mock = mock.Mock(return_value=workflow_mocks)
-        load_patch = mock.patch.object(seddy_specs, "load_workflows", load_mock)
+        load_patch = mock.patch.object(seddy_specs_io, "load_workflows", load_mock)
 
         # Build input
         task = {

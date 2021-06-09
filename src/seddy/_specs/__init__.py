@@ -8,6 +8,8 @@ __all__ = [
     "make_decisions_on_error",
     "DAGBuilder",
     "DAGWorkflow",
+    "WorkflowNotFound",
+    "get_workflow",
     "load_workflows",
     "WORKFLOW",
 ]
@@ -19,6 +21,8 @@ from ._base import Workflow
 from ._base import make_decisions_on_error
 from ._dag import DAGBuilder
 from ._dag import DAGWorkflow
+from ._io import WorkflowNotFound
+from ._io import get_workflow
 from ._io import load_workflows
 
 WORKFLOW = {
