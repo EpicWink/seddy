@@ -113,7 +113,7 @@ def test_get_workflow(tmp_path, workflows_spec):
     exp = seddy_specs.DAGWorkflow(name="spam", version="1.0", task_specs=[_task])
 
     # Run function
-    res = seddy_specs_io.get_workflow("spam", "1.0", workflows_file)
+    res = seddy_specs_io.get_workflow("spam", "1.0", str(workflows_file))
 
     # Check result
     assert (
@@ -135,7 +135,7 @@ def test_get_workflow_missing(tmp_path, workflows_spec, name, version):
 
     # Run function
     with pytest.raises(seddy_specs_io.WorkflowNotFound) as e:
-        seddy_specs_io.get_workflow(name, version, workflows_file)
+        seddy_specs_io.get_workflow(name, version, str(workflows_file))
 
     # Check result
     assert name in str(e.value)

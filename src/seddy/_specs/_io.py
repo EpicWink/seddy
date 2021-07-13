@@ -15,11 +15,13 @@ class WorkflowNotFound(LookupError):
     """Workflow not found."""
 
 
-def _construct_workflows(workflows_spec: t.Dict[str, t.Any]) -> t.List[Workflow]:
+def _construct_workflows(
+    workflow_specs: t.List[t.Dict[str, t.Any]],
+) -> t.List[Workflow]:
     """Construct workflows from specification.
 
     Args:
-        workflows_spec: workflows specifications
+        workflow_specs: workflows specifications
 
     Returns:
         workflow type specifications
@@ -27,9 +29,8 @@ def _construct_workflows(workflows_spec: t.Dict[str, t.Any]) -> t.List[Workflow]
 
     from . import WORKFLOW
 
-    assert (1,) < tuple(map(int, workflows_spec["version"].split("."))) < (2,)
     workflows = []
-    for workflow_spec in workflows_spec["workflows"]:
+    for workflow_spec in workflow_specs:
         workflow_cls = WORKFLOW[workflow_spec["spec_type"]]
         workflow = workflow_cls.from_spec(workflow_spec)
         workflows.append(workflow)
@@ -69,7 +70,7 @@ def _load_specs(workflows_file: pathlib.Path) -> t.Dict[str, t.Any]:
 
 def _load_specs_from_uri(  # TODO: unit-test
     workflows_spec_uri: str
-) -> t.Dict[str, t.Any]:
+) -> t.List[t.Dict[str, t.Any]]:
     """Load workflows specifications.
 
     Supported URI types:
@@ -88,7 +89,12 @@ def _load_specs_from_uri(  # TODO: unit-test
     if not url_parts.scheme or url_parts.scheme == "file":
         if url_parts.scheme == "file":
             workflows_spec_uri = workflows_spec_uri[7:]
-        return _load_specs(pathlib.Path(workflows_spec_uri))
+        workflows_spec = _load_specs(pathlib.Path(workflows_spec_uri))
+        if not (1,) < tuple(map(int, workflows_spec["version"].split("."))) < (2,):
+            raise ValueError(
+                "Unknown workflows file version: %s" % workflows_spec["version"]
+            )
+        return workflows_spec["workflows"]
     else:
         raise ValueError(
             "Unknown URI scheme '%s': %s" % (url_parts.scheme, workflows_spec_uri)
