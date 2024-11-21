@@ -3,11 +3,11 @@
 import json
 from unittest import mock
 
-from seddy import registration as seddy_registration
-from seddy import _specs as seddy_decisions
 import moto
 import boto3
-import pytest
+
+from seddy import _specs as seddy_decisions
+from seddy import registration as seddy_registration
 
 
 class Workflow(seddy_decisions.Workflow):

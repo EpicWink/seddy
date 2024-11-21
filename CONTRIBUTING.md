@@ -3,8 +3,7 @@ Thanks for wanting to help out!
 
 ## Environment installation
 ```bash
-pip3 install -e .
-pip3 install -r tests/requirements.txt
+python -m pip install -e . -r ./tests/requirements.txt -r ./dev.requirements.txt
 ```
 
 ## Testing
@@ -14,8 +13,14 @@ pytest --cov seddy
 
 ## Style-guide
 Follow [PEP-8](https://www.python.org/dev/peps/pep-0008/?), hanging-indent style, with 4
-spaces for indentation, 88-character lines. Lint with [`black`](
-https://black.readthedocs.io/en/stable/)
+spaces for indentation, 88-character lines. Format with [`black`](
+https://black.readthedocs.io/en/stable/) and sort imports with [`isort`](
+https://pycqa.github.io/isort/)
+
+```shell
+python -m black ./src
+python -m isort ./src ./tests
+```
 
 ## TODO
 See the [issues page](https://github.com/EpicWink/seddy/issues) for the current

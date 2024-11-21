@@ -5,12 +5,18 @@ import json
 import logging as lg
 from unittest import mock
 
+import pytest
+import coloredlogs
+
 from seddy import __main__ as seddy_main
 from seddy import decider as seddy_decider
 from seddy import registration as seddy_registration
-import pytest
-import coloredlogs
-import pkg_resources
+
+try:
+    import importlib.metadata as importlib_metadata
+except ImportError:
+    # noinspection PyUnresolvedReferences
+    import importlib_metadata
 
 
 @pytest.fixture
@@ -106,6 +112,7 @@ def test_json_logging(decider_mock, tmp_path, coloredlogs_module, capsys):
         "name": "root",
         "timestamp": mock.ANY,
         "message": "spam eggs",
+        **({"taskName": None} if sys.version_info >= (3, 12) else {}),
     }
 
 
@@ -162,7 +169,7 @@ def test_version(decider_mock, command_line_args, capsys):
 
     # Check output
     res_out = capsys.readouterr().out
-    assert res_out.strip() == pkg_resources.get_distribution("seddy").version
+    assert res_out.strip() == importlib_metadata.version("seddy")
 
 
 @pytest.mark.parametrize(

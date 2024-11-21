@@ -3,17 +3,10 @@
 import pathlib
 import argparse
 
-import pkg_resources
-
 try:
     from pythonjsonlogger import jsonlogger
 except ImportError as e:  # pragma: no cover
     jsonlogger = e
-
-try:
-    version = pkg_resources.get_distribution("seddy").version
-except pkg_resources.DistributionNotFound:  # pragma: no cover
-    version = None
 
 
 def run_app(args: argparse.Namespace):
@@ -36,6 +29,18 @@ def run_app(args: argparse.Namespace):
 
 def build_parser() -> argparse.ArgumentParser:
     """Build command-line argument parser."""
+
+    try:
+        import importlib.metadata as importlib_metadata
+    except ImportError:
+        # noinspection PyUnresolvedReferences
+        import importlib_metadata
+
+    try:
+        version = importlib_metadata.version("seddy")
+    except importlib_metadata.PackageNotFoundError:
+        version = None
+
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "-v", "--verbose", action="count", default=0, help="increase logging verbosity"

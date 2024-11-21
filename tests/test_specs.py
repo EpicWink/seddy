@@ -2,8 +2,9 @@
 
 from unittest import mock
 
-from seddy import _specs as seddy_decisions
 import pytest
+
+from seddy import _specs as seddy_decisions
 
 
 def test_workflow_map():

@@ -2,8 +2,8 @@
 
 import abc
 import enum
-import dataclasses
 import typing as t
+import dataclasses
 
 import swf_typed
 

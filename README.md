@@ -6,6 +6,8 @@ https://github.com/EpicWink/seddy/actions?query=branch%3Amaster+workflow%3Atest)
 https://codecov.io/gh/EpicWink/seddy)
 [![Documentation Status](https://readthedocs.org/projects/seddy/badge/?version=latest)](
 https://seddy.readthedocs.io/en/latest/?badge=latest)
+[![PyPI - Version](https://img.shields.io/pypi/v/seddy?logo=pypi)](
+https://pypi.org/project/seddy/)
 
 Multi-workflow SWF decider and workflow management service.
 

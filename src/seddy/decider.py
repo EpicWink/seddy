@@ -2,15 +2,14 @@
 
 import uuid
 import socket
-import pathlib
 import typing as t
 import logging as lg
+import pathlib
 from concurrent import futures as cf
 
 import swf_typed
 
-from . import _util
-from . import _specs
+from . import _specs, _util
 
 logger = lg.getLogger(__name__)
 socket.setdefaulttimeout(70.0)

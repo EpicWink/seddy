@@ -11,11 +11,13 @@ __all__ = [
     "WORKFLOW",
 ]
 
-from ._specs import ChildPolicy
-from ._specs import Registration
-from ._specs import DecisionsBuilder
-from ._specs import Workflow
-from ._specs import DAGBuilder
-from ._specs import DAGWorkflow
-from ._specs import load_workflows
-from ._specs import WORKFLOW
+from ._specs import (
+    WORKFLOW,
+    ChildPolicy,
+    DAGBuilder,
+    DAGWorkflow,
+    DecisionsBuilder,
+    Registration,
+    Workflow,
+    load_workflows,
+)

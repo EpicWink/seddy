@@ -2,9 +2,10 @@
 
 import logging as lg
 
+import pytest
+
 from seddy import _specs as seddy_specs
 from seddy._specs import _dag
-import pytest
 
 lg.root.setLevel(lg.DEBUG)
 

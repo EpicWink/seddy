@@ -4,12 +4,13 @@ import sys
 import json
 from unittest import mock
 
-from seddy import _util as seddy_util
-from seddy import _specs as seddy_specs
-from seddy._specs import _io as seddy_specs_io
-from seddy._specs import _dag as seddy_specs_dag
-import pytest
 import yaml
+import pytest
+
+from seddy import _specs as seddy_specs
+from seddy import _util as seddy_util
+from seddy._specs import _dag as seddy_specs_dag
+from seddy._specs import _io as seddy_specs_io
 
 
 @pytest.fixture

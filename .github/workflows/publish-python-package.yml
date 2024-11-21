@@ -7,21 +7,21 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/seddy
+    permissions:
+      id-token: write
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v5
     - name: Update pip
       run: pip install -U pip
     - name: Build package
       run: |
         apt-get update && apt-get install -y git
         pip install build
-        python -m build --sdist --wheel .
+        python -m build --outdir dist .
     - name: Publish package
-      env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        pip install twine
-        twine upload dist/*
+      uses: pypa/gh-action-pypi-publish@release/v1
