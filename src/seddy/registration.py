@@ -4,6 +4,8 @@ import typing as t
 import logging as lg
 import pathlib
 
+import swf_typed
+
 from . import _specs, _util
 
 logger = lg.getLogger(__name__)
@@ -21,24 +23,10 @@ def list_workflows(domain: str, client) -> t.Dict[t.Tuple[str, str], bool]:
     """
 
     logger.info("Listing workflows in '%s'", domain)
-
-    # List registered workflows
-    _kwargs = {"domain": domain, "registrationStatus": "REGISTERED"}
-    resp_registered = _util.list_paginated(
-        client.list_workflow_types, "typeInfos", _kwargs
-    )
-
-    # List deprecated workflows
-    _kwargs = {"domain": domain, "registrationStatus": "DEPRECATED"}
-    resp_deprecated = _util.list_paginated(
-        client.list_workflow_types, "typeInfos", _kwargs
-    )
-
-    # Combine
-    registered = [w["workflowType"] for w in resp_registered["typeInfos"]]
-    deprecated = [w["workflowType"] for w in resp_deprecated["typeInfos"]]
-    existing = {(w["name"], w["version"]): True for w in registered}
-    existing.update({(w["name"], w["version"]): False for w in deprecated})
+    registered = swf_typed.list_workflows(domain, deprecated=False, client=client)
+    deprecated = swf_typed.list_workflows(domain, deprecated=True, client=client)
+    existing = {(w.workflow.name, w.workflow.version): True for w in registered}
+    existing.update({(w.workflow.name, w.workflow.version): False for w in deprecated})
     return existing
 
 
@@ -58,28 +46,30 @@ def register_workflow(workflow: _specs.Workflow, domain: str, client):
     kwargs = {}
     if workflow.description is not None:
         kwargs["description"] = workflow.description
+    config = None
     if workflow.registration:
+        config = swf_typed.DefaultExecutionConfiguration()
         if workflow.registration.task_timeout is not None:
-            _default = workflow.registration.task_timeout
-            kwargs["defaultTaskStartToCloseTimeout"] = str(_default)
+            config.decision_task_timeout = workflow.registration.task_timeout
         if workflow.registration.execution_timeout is not None:
-            _default = workflow.registration.execution_timeout
-            kwargs["defaultExecutionStartToCloseTimeout"] = str(_default)
+            config.timeout = workflow.registration.execution_timeout
         if workflow.registration.task_list is not None:
-            kwargs["defaultTaskList"] = {"name": workflow.registration.task_list}
+            config.decision_task_list = workflow.registration.task_list
         if workflow.registration.task_priority is not None:
-            kwargs["defaultTaskPriority"] = str(workflow.registration.task_priority)
+            config.decision_task_priority = workflow.registration.task_priority
         if workflow.registration.child_policy is not None:
-            kwargs["defaultChildPolicy"] = workflow.registration.child_policy.value
+            config.child_execution_policy_on_termination = (
+                workflow.registration.child_policy.value
+            )
         if workflow.registration.lambda_role is not None:
-            kwargs["defaultLambdaRole"] = workflow.registration.lambda_role
+            config.lambda_iam_role_arn = workflow.registration.lambda_role
 
     # Register
-    client.register_workflow_type(
+    swf_typed.register_workflow(
         domain=domain,
-        name=workflow.name,
-        version=workflow.version,
-        **kwargs,
+        workflow=swf_typed.WorkflowId(name=workflow.name, version=workflow.version),
+        default_execution_configuration=config,
+        client=client,
     )
 
 
@@ -94,8 +84,8 @@ def deprecate_workflow(workflow: _specs.Workflow, domain: str, client):
 
     _fmt = "Deprecating workflow '%s' (version %s) in domain '%s'"
     logger.info(_fmt, workflow.name, workflow.version, domain)
-    workflow_type = {"name": workflow.name, "version": workflow.version}
-    client.deprecate_workflow_type(domain=domain, workflowType=workflow_type)
+    workflow_id = swf_typed.WorkflowId(name=workflow.name, version=workflow.version)
+    swf_typed.deprecate_workflow(workflow=workflow_id, domain=domain, client=client)
 
 
 def undeprecate_workflow(workflow: _specs.Workflow, domain: str, client):
@@ -109,8 +99,8 @@ def undeprecate_workflow(workflow: _specs.Workflow, domain: str, client):
 
     _fmt = "Undeprecating workflow '%s' (version %s) in domain '%s'"
     logger.info(_fmt, workflow.name, workflow.version, domain)
-    workflow_type = {"name": workflow.name, "version": workflow.version}
-    client.undeprecate_workflow_type(domain=domain, workflowType=workflow_type)
+    workflow_id = swf_typed.WorkflowId(name=workflow.name, version=workflow.version)
+    swf_typed.undeprecate_workflow(workflow=workflow_id, domain=domain, client=client)
 
 
 def _sync_workflow(

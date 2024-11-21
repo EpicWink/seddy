@@ -7,6 +7,8 @@ import logging as lg
 import pathlib
 from concurrent import futures as cf
 
+import swf_typed
+
 from . import _specs, _util
 
 logger = lg.getLogger(__name__)
@@ -46,25 +48,7 @@ class Decider:
         self.identity = identity or (socket.getfqdn() + "-" + str(uuid.uuid4())[:8])
         self._future = None
 
-    def _poll_for_decision_task(self) -> t.Dict[str, t.Any]:
-        """Poll for a decision task from SWF.
-
-        See https://docs.aws.amazon.com/amazonswf/latest/apireference/API_PollForDecisionTask.html
-
-        Returns:
-            decision task
-        """
-
-        _kwargs = {
-            "domain": self.domain,
-            "identity": self.identity,
-            "taskList": {"name": self.task_list},
-        }
-        return _util.list_paginated(
-            self.client.poll_for_decision_task, "events", _kwargs
-        )
-
-    def _get_workflow(self, task: t.Dict[str, t.Any]) -> _specs.Workflow:
+    def _get_workflow(self, task: swf_typed.DecisionTask) -> _specs.Workflow:
         """Get workflow specification for task.
 
         Args:
@@ -74,57 +58,51 @@ class Decider:
             workflow specification
         """
 
-        name = task["workflowType"]["name"]
-        version = task["workflowType"]["version"]
+        name = task.workflow.name
+        version = task.workflow.version
         try:
             return _specs.get_workflow(name, version, self.workflows_spec_file)
         except _specs.WorkflowNotFound as e:
-            raise UnsupportedWorkflow(task["workflowType"]) from e
+            logger.error("Unsupported workflow type: %s" % task.workflow)
+            raise UnsupportedWorkflow(task.workflow) from e
 
     def _respond_decision_task_completed(
-        self, decisions: t.List[t.Dict[str, t.Any]], task: t.Dict[str, t.Any]
+        self, decisions: t.List[swf_typed.Decision], task: swf_typed.DecisionTask
     ):
         """Send decisions to SWF.
-
-        See https://docs.aws.amazon.com/amazonswf/latest/apireference/API_RespondDecisionTaskCompleted.html
 
         Args:
             decisions: workflow decisions
             task: decision task
         """
 
-        logger.debug(
-            "Sending %d decisions for task '%s'", len(decisions), task["taskToken"]
-        )
-        self.client.respond_decision_task_completed(
-            taskToken=task["taskToken"], decisions=decisions
-        )
+        logger.debug("Sending %d decisions for task '%s'", len(decisions), task.token)
+        swf_typed.send_decisions(task.token, decisions=decisions, client=self.client)
 
     def _poll_and_run(self):
         """Perform poll, and possibly run decision task."""
-        task = self._poll_for_decision_task()
+        task = swf_typed.request_decision_task(
+            task_list=self.task_list,
+            domain=self.domain,
+            decider_identity=self.identity,
+            client=self.client,
+        )
         logger.debug("Decision task: %s", task)
-        if not task["taskToken"]:
-            return
         executor = cf.ThreadPoolExecutor(max_workers=1)
         self._future = executor.submit(self._decide_and_respond, task)
         self._future.result()
 
-    def _decide_and_respond(self, task):
+    def _decide_and_respond(self, task: swf_typed.DecisionTask):
         """Make and respond with decisions."""
         logger.info(
             "Got decision task '%s' for workflow '%s-%s' execution '%s' (run '%s')",
-            task["taskToken"],
-            task["workflowType"]["name"],
-            task["workflowType"]["version"],
-            task["workflowExecution"]["workflowId"],
-            task["workflowExecution"]["runId"],
+            task.token,
+            task.workflow.name,
+            task.workflow.version,
+            task.execution.id,
+            task.execution.run_id,
         )
-        try:
-            workflow = self._get_workflow(task)
-        except UnsupportedWorkflow:
-            logger.error("Unsupported workflow type: %s" % task["workflowType"])
-            raise
+        workflow = self._get_workflow(task)
         workflow.setup()
 
         exc = None

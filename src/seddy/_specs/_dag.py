@@ -4,103 +4,54 @@ import json
 import string
 import typing as t
 import logging as lg
+import datetime
 import dataclasses
+
+import swf_typed
 
 from . import _base
 
 logger = lg.getLogger(__name__)
 _jsonpath_characters = string.digits + string.ascii_letters + "_"
 _sentinel = object()
-_attr_keys = {
-    "ActivityTaskCancelRequested": "activityTaskCancelRequestedEventAttributes",
-    "ActivityTaskCanceled": "activityTaskCanceledEventAttributes",
-    "ActivityTaskCompleted": "activityTaskCompletedEventAttributes",
-    "ActivityTaskFailed": "activityTaskFailedEventAttributes",
-    "ActivityTaskScheduled": "activityTaskScheduledEventAttributes",
-    "ActivityTaskStarted": "activityTaskStartedEventAttributes",
-    "ActivityTaskTimedOut": "activityTaskTimedOutEventAttributes",
-    "CancelTimerFailed": "cancelTimerFailedEventAttributes",
-    "CancelWorkflowExecutionFailed": "cancelWorkflowExecutionFailedEventAttributes",
-    "ChildWorkflowExecutionCanceled": "childWorkflowExecutionCanceledEventAttributes",
-    "ChildWorkflowExecutionCompleted": "childWorkflowExecutionCompletedEventAttributes",
-    "ChildWorkflowExecutionFailed": "childWorkflowExecutionFailedEventAttributes",
-    "ChildWorkflowExecutionStarted": "childWorkflowExecutionStartedEventAttributes",
-    "ChildWorkflowExecutionTerminated": "childWorkflowExecutionTerminatedEventAttributes",
-    "ChildWorkflowExecutionTimedOut": "childWorkflowExecutionTimedOutEventAttributes",
-    "CompleteWorkflowExecutionFailed": "completeWorkflowExecutionFailedEventAttributes",
-    "ContinueAsNewWorkflowExecutionFailed": "continueAsNewWorkflowExecutionFailedEventAttributes",
-    "DecisionTaskCompleted": "decisionTaskCompletedEventAttributes",
-    "DecisionTaskScheduled": "decisionTaskScheduledEventAttributes",
-    "DecisionTaskStarted": "decisionTaskStartedEventAttributes",
-    "DecisionTaskTimedOut": "decisionTaskTimedOutEventAttributes",
-    "ExternalWorkflowExecutionCancelRequested": "externalWorkflowExecutionCancelRequestedEventAttributes",
-    "ExternalWorkflowExecutionSignaled": "externalWorkflowExecutionSignaledEventAttributes",
-    "FailWorkflowExecutionFailed": "failWorkflowExecutionFailedEventAttributes",
-    "LambdaFunctionCompleted": "lambdaFunctionCompletedEventAttributes",
-    "LambdaFunctionFailed": "lambdaFunctionFailedEventAttributes",
-    "LambdaFunctionScheduled": "lambdaFunctionScheduledEventAttributes",
-    "LambdaFunctionStarted": "lambdaFunctionStartedEventAttributes",
-    "LambdaFunctionTimedOut": "lambdaFunctionTimedOutEventAttributes",
-    "MarkerRecorded": "markerRecordedEventAttributes",
-    "RecordMarkerFailed": "recordMarkerFailedEventAttributes",
-    "RequestCancelActivityTaskFailed": "requestCancelActivityTaskFailedEventAttributes",
-    "RequestCancelExternalWorkflowExecutionFailed": "requestCancelExternalWorkflowExecutionFailedEventAttributes",
-    "RequestCancelExternalWorkflowExecutionInitiated": "requestCancelExternalWorkflowExecutionInitiatedEventAttributes",
-    "ScheduleActivityTaskFailed": "scheduleActivityTaskFailedEventAttributes",
-    "ScheduleLambdaFunctionFailed": "scheduleLambdaFunctionFailedEventAttributes",
-    "SignalExternalWorkflowExecutionFailed": "signalExternalWorkflowExecutionFailedEventAttributes",
-    "SignalExternalWorkflowExecutionInitiated": "signalExternalWorkflowExecutionInitiatedEventAttributes",
-    "StartChildWorkflowExecutionFailed": "startChildWorkflowExecutionFailedEventAttributes",
-    "StartChildWorkflowExecutionInitiated": "startChildWorkflowExecutionInitiatedEventAttributes",
-    "StartLambdaFunctionFailed": "startLambdaFunctionFailedEventAttributes",
-    "StartTimerFailed": "startTimerFailedEventAttributes",
-    "TimerCanceled": "timerCanceledEventAttributes",
-    "TimerFired": "timerFiredEventAttributes",
-    "TimerStarted": "timerStartedEventAttributes",
-    "WorkflowExecutionCancelRequested": "workflowExecutionCancelRequestedEventAttributes",
-    "WorkflowExecutionCanceled": "workflowExecutionCanceledEventAttributes",
-    "WorkflowExecutionCompleted": "workflowExecutionCompletedEventAttributes",
-    "WorkflowExecutionContinuedAsNew": "workflowExecutionContinuedAsNewEventAttributes",
-    "WorkflowExecutionFailed": "workflowExecutionFailedEventAttributes",
-    "WorkflowExecutionSignaled": "workflowExecutionSignaledEventAttributes",
-    "WorkflowExecutionStarted": "workflowExecutionStartedEventAttributes",
-    "WorkflowExecutionTerminated": "workflowExecutionTerminatedEventAttributes",
-    "WorkflowExecutionTimedOut": "workflowExecutionTimedOutEventAttributes",
-}
-_error_events = {
-    "ActivityTaskFailed",
-    "ActivityTaskTimedOut",
-    "CancelTimerFailed",
-    "CancelWorkflowExecutionFailed",
-    "CompleteWorkflowExecutionFailed",
-    "DecisionTaskTimedOut",
-    "FailWorkflowExecutionFailed",
-    "RecordMarkerFailed",
-    "RequestCancelActivityTaskFailed",
-    "ScheduleActivityTaskFailed",
-    "StartTimerFailed",
-    "WorkflowExecutionCancelRequested",
-}
-_activity_events = {
-    "ActivityTaskCompleted",
-    "ActivityTaskFailed",
-    "ActivityTaskTimedOut",
-    "ActivityTaskScheduled",
-    "ActivityTaskStarted",
-}
-_decision_failed_events = {
-    "ScheduleActivityTaskFailed",
-    "RequestCancelActivityTaskFailed",
-    "StartTimerFailed",
-    "CancelTimerFailed",
-    "StartChildWorkflowExecutionFailed",
-    "SignalExternalWorkflowExecutionFailed",
-    "RequestCancelExternalWorkflowExecutionFailed",
-    "CancelWorkflowExecutionFailed",
-    "CompleteWorkflowExecutionFailed",
-    "ContinueAsNewWorkflowExecutionFailed",
-    "FailWorkflowExecutionFailed",
-}
+_error_events = (
+    swf_typed.ActivityTaskFailedEvent,
+    swf_typed.ActivityTaskTimedOutEvent,
+    swf_typed.CancelTimerFailedEvent,
+    swf_typed.CancelWorkflowExecutionFailedEvent,
+    swf_typed.CompleteWorkflowExecutionFailedEvent,
+    swf_typed.DecisionTaskTimedOutEvent,
+    swf_typed.FailWorkflowExecutionFailedEvent,
+    swf_typed.RecordMarkerFailedEvent,
+    swf_typed.RequestCancelActivityTaskFailedEvent,
+    swf_typed.ScheduleActivityTaskFailedEvent,
+    swf_typed.StartTimerFailedEvent,
+    swf_typed.WorkflowExecutionCancelRequestedEvent,
+)
+_activity_events = (
+    swf_typed.ActivityTaskCompletedEvent,
+    swf_typed.ActivityTaskFailedEvent,
+    swf_typed.ActivityTaskTimedOutEvent,
+    swf_typed.ActivityTaskScheduledEvent,
+    swf_typed.ActivityTaskStartedEvent,
+)
+_decision_failed_events = (
+    swf_typed.ScheduleActivityTaskFailedEvent,
+    swf_typed.RequestCancelActivityTaskFailedEvent,
+    swf_typed.StartTimerFailedEvent,
+    swf_typed.CancelTimerFailedEvent,
+    swf_typed.StartChildWorkflowExecutionFailedEvent,
+    swf_typed.SignalExternalWorkflowExecutionFailedEvent,
+    swf_typed.RequestCancelExternalWorkflowExecutionFailedEvent,
+    swf_typed.CancelWorkflowExecutionFailedEvent,
+    swf_typed.CompleteWorkflowExecutionFailedEvent,
+    swf_typed.ContinueAsNewWorkflowExecutionFailedEvent,
+    swf_typed.FailWorkflowExecutionFailedEvent,
+)
+_execution_timeout_events = (
+    swf_typed.DecisionTaskTimedOutEvent,
+    swf_typed.WorkflowExecutionTimedOutEvent,
+)
 
 
 @dataclasses.dataclass
@@ -209,9 +160,9 @@ class Task:  # TODO: unit-test
     _input_cls: t.ClassVar = TaskInput
 
     @property
-    def type(self) -> t.Dict[str, str]:
+    def type(self) -> swf_typed.ActivityId:
         """Activity type."""
-        return {"name": self.name, "version": self.version}
+        return swf_typed.ActivityId(name=self.name, version=self.version)
 
     @classmethod
     def from_spec(cls, spec: t.Dict[str, t.Any]) -> "Task":
@@ -236,11 +187,6 @@ class Task:  # TODO: unit-test
         if "dependencies" in spec:
             kwargs["dependencies"] = spec["dependencies"]
         return cls(*args, **kwargs)
-
-
-def _get(item_id, items, id_key):
-    """Get item from list with given ID."""
-    return next(item for item in items if item[id_key] == item_id)
 
 
 def _get_item_jsonpath(path: str, obj, default: t.Any = _sentinel) -> t.Any:
@@ -358,68 +304,68 @@ class DAGBuilder(_base.DecisionsBuilder):
         self._ready_activities = set()
 
     def _schedule_task(self, activity_task: Task):
-        workflow_started_event = self.task["events"][0]
-        assert workflow_started_event["eventType"] == "WorkflowExecutionStarted"
-        attrs = workflow_started_event["workflowExecutionStartedEventAttributes"]
-        decision_attributes = {
-            "activityId": activity_task.id,
-            "activityType": activity_task.type,
-        }
+        workflow_started_event = self.task.execution_history[0]
+        assert isinstance(
+            workflow_started_event, swf_typed.WorkflowExecutionStartedEvent
+        )
+        # attrs = workflow_started_event["workflowExecutionStartedEventAttributes"]
+        decision = swf_typed.ScheduleActivityTaskDecision(
+            activity=activity_task.type, task_id=activity_task.id
+        )
 
         # Build input
         input_spec = activity_task.input
-        workflow_input = json.loads(attrs.get("input", "null"))
+        workflow_input = json.loads(workflow_started_event.execution_input)
         activity_results = {}
         for activity_task_id, events in self._activity_task_events.items():
             if activity_task_id in (activity_task.dependencies or []):
-                assert events[-1]["eventType"] == "ActivityTaskCompleted"
-            elif not events or events[-1]["eventType"] != "ActivityTaskCompleted":
+                assert isinstance(events[-1], swf_typed.ActivityTaskCompletedEvent)
+            elif not events or not isinstance(
+                events[-1], swf_typed.ActivityTaskCompletedEvent
+            ):
                 continue
-            d_attrs = events[-1].get("activityTaskCompletedEventAttributes", {})
-            if "result" in d_attrs:
-                activity_results[activity_task_id] = json.loads(d_attrs["result"])
+            if events[-1].task_result or events[-1].task_result == "":
+                activity_results[activity_task_id] = json.loads(events[-1].task_result)
         input_ = _build_activity_input(input_spec, workflow_input, activity_results)
         if input_ is not _sentinel:
-            decision_attributes["input"] = json.dumps(input_)
+            decision.task_input = json.dumps(input_)
 
         # Set other attributes
+        decision.task_configuration = swf_typed.PartialTaskConfiguration()
         if activity_task.heartbeat is not None:
-            decision_attributes["heartbeatTimeout"] = str(activity_task.heartbeat)
+            decision.task_configuration.heartbeat_timeout = datetime.timedelta(
+                seconds=int(activity_task.heartbeat),
+            )
         if activity_task.timeout is not None:
-            decision_attributes["startToCloseTimeout"] = str(activity_task.timeout)
+            decision.task_configuration.runtime_timeout = datetime.timedelta(
+                seconds=int(activity_task.timeout),
+            )
         if activity_task.task_list is not None:
-            decision_attributes["taskList"] = {"name": activity_task.task_list}
+            decision.task_configuration.task_list = activity_task.task_list
         if activity_task.priority is not None:
-            decision_attributes["taskPriority"] = str(activity_task.priority)
+            decision.task_configuration.priority = activity_task.priority
 
-        decision = {
-            "decisionType": "ScheduleActivityTask",
-            "scheduleActivityTaskDecisionAttributes": decision_attributes,
-        }
         self.decisions.append(decision)
 
     def _get_scheduled_references(self):
-        for event in self.task["events"]:
-            if event["eventType"] in _activity_events:
-                if event["eventType"] == "ActivityTaskScheduled":
-                    self._scheduled[event["eventId"]] = event
+        events_by_id = {e.id: e for e in self.task.execution_history}
+        for event in self.task.execution_history:
+            if isinstance(event, _activity_events):
+                if isinstance(event, swf_typed.ActivityTaskScheduledEvent):
+                    self._scheduled[event.id] = event
                 else:
-                    attrs = event[_attr_keys[event["eventType"]]]
-                    self._scheduled[event["eventId"]] = _get(
-                        attrs["scheduledEventId"], self.task["events"], "eventId"
-                    )
+                    scheduled_id = event.task_scheduled_event_id
+                    self._scheduled[event.id] = events_by_id[scheduled_id]
 
     def _get_activity_task_events(self):
-        for event in self.task["events"]:
-            if event["eventType"] in _activity_events:
-                scheduled_event = self._scheduled[event["eventId"]]
-                attrs = scheduled_event["activityTaskScheduledEventAttributes"]
-                self._activity_task_events[attrs["activityId"]].append(event)
+        for event in self.task.execution_history:
+            if isinstance(event, _activity_events):
+                scheduled_event = self._scheduled[event.id]
+                self._activity_task_events[scheduled_event.task_id].append(event)
 
-    def _process_activity_task_completed_event(self, event: t.Dict[str, t.Any]):
-        scheduled_event = self._scheduled[event["eventId"]]
-        attrs = scheduled_event["activityTaskScheduledEventAttributes"]
-        dependants_task = self.workflow.dependants[attrs["activityId"]]
+    def _process_activity_task_completed_event(self, event: swf_typed.Event) -> None:
+        scheduled_event = self._scheduled[event.id]
+        dependants_task = self.workflow.dependants[scheduled_event.task_id]
 
         for activity_task_id in dependants_task:
             assert not self._activity_task_events[activity_task_id]
@@ -428,7 +374,9 @@ class DAGBuilder(_base.DecisionsBuilder):
             dependencies_satisfied = True
             for dependency_activity_task_id in task.dependencies:
                 events = self._activity_task_events[dependency_activity_task_id]
-                if not events or events[-1]["eventType"] != "ActivityTaskCompleted":
+                if not events or not isinstance(
+                    events[-1], swf_typed.ActivityTaskCompletedEvent
+                ):
                     dependencies_satisfied = False
                     break
             if dependencies_satisfied:
@@ -437,60 +385,53 @@ class DAGBuilder(_base.DecisionsBuilder):
     def _complete_workflow(self):
         tasks_complete = True
         for events in self._activity_task_events.values():
-            if not events or events[-1]["eventType"] != "ActivityTaskCompleted":
+            if not events or not isinstance(
+                events[-1], swf_typed.ActivityTaskCompletedEvent
+            ):
                 tasks_complete = False
                 break
 
         if tasks_complete:
             result = {}
             for activity_id, events in self._activity_task_events.items():
-                assert events and events[-1]["eventType"] == "ActivityTaskCompleted"
-                attrs = events[-1].get("activityTaskCompletedEventAttributes")
-                if attrs and "result" in attrs:
-                    result[activity_id] = json.loads(attrs["result"])
+                assert events and isinstance(
+                    events[-1], swf_typed.ActivityTaskCompletedEvent
+                )
+                if events[-1].task_result or events[-1].task_result == "":
+                    result[activity_id] = json.loads(events[-1].task_result)
 
-            decision = {"decisionType": "CompleteWorkflowExecution"}
+            decision = swf_typed.CompleteWorkflowExecutionDecision()
             if result:
-                decision_attrs = {"result": json.dumps(result)}
-                decision["completeWorkflowExecutionDecisionAttributes"] = decision_attrs
+                decision.execution_result = json.dumps(result)
             self.decisions = [decision]
 
     def _fail_workflow(self, reason=None, details=None):
-        decision_attrs = {}
+        decision = swf_typed.FailWorkflowExecutionDecision()
         if reason:
-            decision_attrs["reason"] = reason
+            decision.reason = reason
         if details:
-            decision_attrs["details"] = details
-        decision = {"decisionType": "FailWorkflowExecution"}
-        if decision_attrs:
-            decision["failWorkflowExecutionDecisionAttributes"] = decision_attrs
+            decision.details = details
         self.decisions = [decision]
 
-    def _process_decision_failed(self, event: t.Dict[str, t.Any]) -> bool:
-        event_ids = [event["eventId"] for event in self.task["events"]]
-        attrs = event[_attr_keys[event["eventType"]]]
-        if attrs["cause"] == "OPERATION_NOT_PERMITTED":
-            idx = event_ids.index(attrs["DecisionTaskCompletedEventId"])
-            dc_event = self.task["events"][idx]
-            dc_attrs = dc_event["decisionTaskCompletedEventAttributes"]
-            idx = event_ids.index(dc_attrs["startedEventId"])
-            ds_event = self.task["events"][idx]
-            ds_attrs = ds_event["decisionTaskStartedEventAttributes"]
-            this_ds_event = self.task["events"][-1]
-            this_ds_attrs = this_ds_event["decisionTaskStartedEventAttributes"]
-            if ds_attrs["identity"] == this_ds_attrs["identity"]:
+    def _process_decision_failed(self, event: swf_typed.Event) -> bool:
+        events_by_id = {e.id: e for e in self.task.execution_history}
+        if event.cause == swf_typed.DecisionFailureCause.unauthorised:
+            dc_event = events_by_id[event.decision_event_id]
+            ds_event = events_by_id[dc_event.decision_task_started_event_id]
+            this_ds_event = self.task.execution_history[-1]
+            if ds_event.decider_identity == this_ds_event.decider_identity:
                 raise _base.DeciderError("Not permitted")
             else:
                 return False
-        elif attrs["cause"] != "UNHANDLED_DECISION":
+        elif event.cause == swf_typed.DecisionFailureCause.unhandled_decision:
             raise _base.DeciderError()
 
-        if event["eventType"] == "CancelWorkflowExecutionFailed":
-            self.decisions = [{"decisionType": "CancelWorkflowExecution"}]
+        if isinstance(event, swf_typed.CancelWorkflowExecutionFailedEvent):
+            self.decisions = [swf_typed.CancelWorkflowExecutionDecision()]
             return True
-        elif event["eventType"] == "FailWorkflowExecutionFailed":
+        elif isinstance(event, swf_typed.FailWorkflowExecutionFailedEvent):
             return False
-        elif event["eventType"] == "CompleteWorkflowExecutionFailed":
+        elif isinstance(event, swf_typed.CompleteWorkflowExecutionFailedEvent):
             self._complete_workflow()
             return True
 
@@ -506,27 +447,29 @@ class DAGBuilder(_base.DecisionsBuilder):
         time_out_events = []
         other_events = []
         for event in self._error_events:
-            if event["eventType"] == "ActivityTaskFailed":
+            if isinstance(event, swf_typed.ActivityTaskFailedEvent):
                 activity_events.append(event)
-            elif event["eventType"] == "ActivityTaskTimedOut":
-                attr = event["activityTaskTimedOutEventAttributes"]
-                if attr["timeoutType"] in ("START_TO_CLOSE", "HEARTBEAT"):
+            elif isinstance(event, swf_typed.ActivityTaskTimedOutEvent):
+                if event.timeout_type in (
+                    swf_typed.TimeoutType.runtime,
+                    swf_typed.TimeoutType.heartbeat,
+                ):
                     activity_events.append(event)
-                elif attr["timeoutType"] in ("SCHEDULE_TO_START", "SCHEDULE_TO_CLOSE"):
+                elif event.timeout_type in (
+                    swf_typed.TimeoutType.schedule,
+                    swf_typed.TimeoutType.total,
+                ):
                     time_out_events.append(event)
-            elif event["eventType"] == "WorkflowExecutionCancelRequested":
-                self.decisions = [{"decisionType": "CancelWorkflowExecution"}]
+            elif isinstance(event, swf_typed.WorkflowExecutionCancelRequestedEvent):
+                self.decisions = [swf_typed.CancelWorkflowExecutionDecision()]
                 return True
-            elif event["eventType"] in _decision_failed_events:
+            elif isinstance(event, _decision_failed_events):
                 if self._process_decision_failed(event):
                     return True
                 decider_events.append(event)
-            elif event["eventType"] in (
-                "DecisionTaskTimedOut",
-                "WorkflowExecutionTimedOut",
-            ):
+            elif isinstance(event, _execution_timeout_events):
                 time_out_events.append(event)
-            elif event["eventType"] == "RecordMarkerFailed":
+            elif isinstance(event, swf_typed.RecordMarkerFailedEvent):
                 other_events.append(event)
 
         details = []
@@ -542,26 +485,29 @@ class DAGBuilder(_base.DecisionsBuilder):
         self._fail_workflow(details=details)
         return True
 
-    def _process_event(self, event: t.Dict[str, t.Any]):
-        if event["eventType"] == "ActivityTaskCompleted":
+    def _process_event(self, event: swf_typed.Event) -> None:
+        if isinstance(event, swf_typed.ActivityTaskCompletedEvent):
             self._process_activity_task_completed_event(event)
-        elif event["eventType"] == "WorkflowExecutionStarted":
+        elif isinstance(event, swf_typed.WorkflowExecutionStartedEvent):
             self._schedule_initial_activity_tasks()
 
     def _get_new_events(self):
-        event_ids = [event["eventId"] for event in self.task["events"]]
-        current_idx = event_ids.index(self.task["startedEventId"])
+        event_ids = [e.id for e in self.task.execution_history]
+        current_idx = event_ids.index(
+            self.task.decision_task_started_execution_history_event_id
+        )
         previous_idx = -1
-        if self.task["previousStartedEventId"] in event_ids:
-            previous_idx = event_ids.index(self.task["previousStartedEventId"])
-        events = self.task["events"][previous_idx + 1 : current_idx + 1]
+        prev_id = self.task.previous_decision_task_started_execution_history_event_id
+        if prev_id in event_ids:
+            previous_idx = event_ids.index(prev_id)
+        events = self.task.execution_history[previous_idx + 1 : current_idx + 1]
         logger.debug(
             "Processing %d events from index %d (ID: %s) to %d (ID: %s)",
             len(events),
             previous_idx + 1,
-            events[0]["eventId"],
+            events[0].id,
             current_idx,
-            events[-1]["eventId"],
+            events[-1].id,
         )
         self._new_events = events
 
@@ -572,11 +518,15 @@ class DAGBuilder(_base.DecisionsBuilder):
             self._schedule_task(task)
 
     def _process_new_events(self):
-        assert self.task["events"][-1]["eventType"] == "DecisionTaskStarted"
-        assert self.task["events"][-2]["eventType"] == "DecisionTaskScheduled"
+        assert isinstance(
+            self.task.execution_history[-1], swf_typed.DecisionTaskStartedEvent
+        )
+        assert isinstance(
+            self.task.execution_history[-2], swf_typed.DecisionTaskScheduledEvent
+        )
 
         for event in self._new_events[:-2]:
-            if event["eventType"] in _error_events:
+            if isinstance(event, _error_events):
                 self._error_events.append(event)
         if self._process_error_events():
             return
