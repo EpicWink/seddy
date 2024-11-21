@@ -29,9 +29,10 @@ jobs:
       run: |
         apt-get update && apt-get install -y git
         pip --no-cache-dir install .
+    - name: Install dev requirements
+      run: pip install -r dev.requirements.txt
     - name: Lint with black
       run: |
-        pip install black
         black --check src/
     - name: Test with pytest
       run: |
