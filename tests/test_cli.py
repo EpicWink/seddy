@@ -10,7 +10,12 @@ from seddy import decider as seddy_decider
 from seddy import registration as seddy_registration
 import pytest
 import coloredlogs
-import pkg_resources
+
+try:
+    import importlib.metadata as importlib_metadata
+except ImportError:
+    # noinspection PyUnresolvedReferences
+    import importlib_metadata
 
 
 @pytest.fixture
@@ -162,7 +167,7 @@ def test_version(decider_mock, command_line_args, capsys):
 
     # Check output
     res_out = capsys.readouterr().out
-    assert res_out.strip() == pkg_resources.get_distribution("seddy").version
+    assert res_out.strip() == importlib_metadata.version("seddy")
 
 
 @pytest.mark.parametrize(
