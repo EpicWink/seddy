@@ -112,6 +112,7 @@ def test_json_logging(decider_mock, tmp_path, coloredlogs_module, capsys):
         "name": "root",
         "timestamp": mock.ANY,
         "message": "spam eggs",
+        **({"taskName": None} if sys.version_info >= (3, 12) else {}),
     }
 
 
