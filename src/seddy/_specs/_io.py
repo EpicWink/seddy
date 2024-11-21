@@ -1,9 +1,9 @@
 """Workflows specs serialisation and desieralisation."""
 
 import json
-import pathlib
 import typing as t
 import logging as lg
+import pathlib
 
 from . import Workflow
 

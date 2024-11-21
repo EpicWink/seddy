@@ -5,11 +5,12 @@ import json
 import logging as lg
 from unittest import mock
 
+import pytest
+import coloredlogs
+
 from seddy import __main__ as seddy_main
 from seddy import decider as seddy_decider
 from seddy import registration as seddy_registration
-import pytest
-import coloredlogs
 
 try:
     import importlib.metadata as importlib_metadata

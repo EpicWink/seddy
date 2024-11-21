@@ -2,9 +2,9 @@
 
 import json
 import string
-import dataclasses
 import typing as t
 import logging as lg
+import dataclasses
 
 from . import _base
 

@@ -1,11 +1,10 @@
 """SWF workflow registration."""
 
-import pathlib
 import typing as t
 import logging as lg
+import pathlib
 
-from . import _util
-from . import _specs
+from . import _specs, _util
 
 logger = lg.getLogger(__name__)
 

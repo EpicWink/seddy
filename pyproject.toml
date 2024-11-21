@@ -6,3 +6,7 @@ requires = [
 ]
 
 [tool.setuptools_scm]
+
+[tool.isort]
+length_sort_straight = true
+profile = "black"

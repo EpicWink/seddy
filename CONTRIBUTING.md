@@ -14,10 +14,12 @@ pytest --cov seddy
 ## Style-guide
 Follow [PEP-8](https://www.python.org/dev/peps/pep-0008/?), hanging-indent style, with 4
 spaces for indentation, 88-character lines. Format with [`black`](
-https://black.readthedocs.io/en/stable/)
+https://black.readthedocs.io/en/stable/) and sort imports with [`isort`](
+https://pycqa.github.io/isort/)
 
 ```shell
 python -m black ./src
+python -m isort ./src ./tests
 ```
 
 ## TODO
