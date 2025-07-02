@@ -112,7 +112,7 @@ def get_swf_client(socket_read_timeout: float = None):
     import boto3
     import botocore.config
 
-    config = botocore.config.Config()
+    config = botocore.config.Config(retries=dict(mode="adaptive"))
 
     if socket_read_timeout is not None:
         config.read_timeout = socket_read_timeout
