@@ -9,6 +9,11 @@ import boto3
 from seddy import _specs as seddy_decisions
 from seddy import registration as seddy_registration
 
+mock_swf = getattr(moto, "mock_aws", None)
+if mock_swf is None:
+    # noinspection PyUnresolvedReferences
+    mock_swf = moto.mock_swf
+
 
 class Workflow(seddy_decisions.Workflow):
     """Test workflow specification."""
@@ -20,7 +25,7 @@ class Workflow(seddy_decisions.Workflow):
 seddy_decisions.WORKFLOW["test"] = Workflow
 
 
-@moto.mock_swf
+@mock_swf
 def test_list_workflows():
     """Test registered workflow listing."""
     # Setup environment
@@ -38,7 +43,7 @@ def test_list_workflows():
     assert res == {("foo", "1.0"): False, ("foo", "1.1"): True, ("bar", "0.42"): True}
 
 
-@moto.mock_swf
+@mock_swf
 def test_register_workflow():
     """Test workflow registration."""
     # Setup environment
@@ -74,7 +79,7 @@ def test_register_workflow():
     assert cfg["defaultLambdaRole"] == "arn:aws:iam::spam:role/eggs"
 
 
-@moto.mock_swf
+@mock_swf
 def test_deprecate_workflow():
     """Test workflow deprecation."""
     # Setup environment
@@ -95,7 +100,7 @@ def test_deprecate_workflow():
     assert workflow_info["typeInfo"]["status"] == "DEPRECATED"
 
 
-@moto.mock_swf
+@mock_swf
 def test_undeprecate_workflow():
     """Test workflow undeprecation."""
     # Setup environment
@@ -119,7 +124,7 @@ def test_undeprecate_workflow():
     assert workflow_info["typeInfo"]["status"] == "REGISTERED"
 
 
-@moto.mock_swf
+@mock_swf
 def test_register_workflows():
     """Test workflows registration syncing."""
     # Setup environment

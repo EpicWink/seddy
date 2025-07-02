@@ -12,6 +12,11 @@ from seddy import _specs as seddy_specs
 from seddy import decider as seddy_decider
 from seddy._specs import _io as seddy_specs_io
 
+mock_swf = getattr(moto, "mock_aws", None)
+if mock_swf is None:
+    # noinspection PyUnresolvedReferences
+    mock_swf = moto.mock_swf
+
 
 class TestDecider:
     @pytest.fixture
@@ -54,7 +59,7 @@ class TestDecider:
         assert isinstance(instance.client, botocore_client.BaseClient)
         assert instance.identity == "abcd1234"
 
-    @moto.mock_swf
+    @mock_swf
     def test_poll_for_decision_task(self, instance):
         # Setup environment
         instance.client.register_domain(
@@ -193,7 +198,7 @@ class TestDecider:
         # Check result
         assert e.value.args[0] == {"name": "bar", "version": "0.43"}
 
-    @moto.mock_swf
+    @mock_swf
     def test_respond_decision_task_completed(self, instance):
         # Setup environment
         instance.client.register_domain(
