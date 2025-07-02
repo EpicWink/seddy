@@ -10,7 +10,6 @@ from concurrent import futures as cf
 from . import _specs, _util
 
 logger = lg.getLogger(__name__)
-socket.setdefaulttimeout(70.0)
 
 
 class UnsupportedWorkflow(LookupError):
@@ -42,7 +41,7 @@ class Decider:
         self.workflows_spec_file = workflows_spec_file
         self.domain = domain
         self.task_list = task_list
-        self.client = _util.get_swf_client()
+        self.client = _util.get_swf_client(socket_read_timeout=70.0)
         self.identity = identity or (socket.getfqdn() + "-" + str(uuid.uuid4())[:8])
         self._future = None
 

@@ -1,7 +1,6 @@
 """Test ``seddy.decider``."""
 
 import os
-import socket
 from concurrent import futures as cf
 from unittest import mock
 
@@ -12,10 +11,6 @@ from botocore import client as botocore_client
 from seddy import _specs as seddy_specs
 from seddy import decider as seddy_decider
 from seddy._specs import _io as seddy_specs_io
-
-
-def test_socket_timeout():
-    assert socket.getdefaulttimeout() >= 70.0
 
 
 class TestDecider:

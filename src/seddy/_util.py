@@ -100,7 +100,7 @@ def list_paginated(
     return resp
 
 
-def get_swf_client():
+def get_swf_client(socket_read_timeout: float = None):
     """Create an SWF client.
 
     Uses ``AWS_SWF_ENDPOINT_URL`` from environment for the endpoint URL.
@@ -110,8 +110,14 @@ def get_swf_client():
     """
 
     import boto3
+    import botocore.config
+
+    config = botocore.config.Config()
+
+    if socket_read_timeout is not None:
+        config.read_timeout = socket_read_timeout
 
     logger.debug(
         "Creating SWF client with endpoint URL: %s", AWS_SWF_ENDPOINT_URL or "<default>"
     )
-    return boto3.client("swf", endpoint_url=AWS_SWF_ENDPOINT_URL)
+    return boto3.client("swf", endpoint_url=AWS_SWF_ENDPOINT_URL, config=config)
