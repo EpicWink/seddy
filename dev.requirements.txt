@@ -1,2 +1,9 @@
+# Project
+-e .
+
+# Testing
+-r ./tests/requirements.txt
+
+# Linting
 black ~= 22.0
 isort ~= 5.0
