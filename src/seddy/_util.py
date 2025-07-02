@@ -29,7 +29,10 @@ def setup_logging(verbose: int, json_logging: bool = False):
     fmt = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
 
     if json_logging:
-        from pythonjsonlogger import jsonlogger
+        try:
+            from pythonjsonlogger import json as jsonlogger
+        except ImportError:
+            from pythonjsonlogger import jsonlogger
 
         handler = lg.StreamHandler()
         formatter = jsonlogger.JsonFormatter(
