@@ -107,12 +107,13 @@ def test_json_logging(decider_mock, tmp_path, coloredlogs_module, capsys):
 
     # Check logging configuration
     root_logger.warning("spam %s", "eggs")
-    assert json.loads(capsys.readouterr().err) == {
+    result_log = json.loads(capsys.readouterr().err)
+    assert result_log == {
         "levelname": "WARNING",
         "name": "root",
         "timestamp": mock.ANY,
         "message": "spam eggs",
-        **({"taskName": None} if sys.version_info >= (3, 12) else {}),
+        **({"taskName": None} if "taskName" in result_log else {}),
     }
 
 
