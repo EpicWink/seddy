@@ -57,5 +57,5 @@ pydoc3 seddy
 ## Docker
 Instead of installing `seddy` locally, you can use our pre-built Docker image
 ```bash
-docker run -v /path/to/workflow/file/parent:/seddy-data seddy -h
+docker run -v /path/to/workflow/file/parent:/seddy-data epicwink/seddy -h
 ```
