@@ -7,7 +7,8 @@ We'll use `moto <https://github.com/spulec/moto>`_, a tool which mocks out SWF.
 
 .. warning::
 
-   ``moto`` v1.3.16 is required to correctly mock SWF (however, unlike using AWS for
+   ``moto`` v1.3.16 or later is required to correctly mock SWF (however, unlike using
+   AWS for
    real, task-polling returns instantly).
 
 Set-up
