@@ -4,9 +4,12 @@ import pathlib
 import argparse
 
 try:
-    from pythonjsonlogger import jsonlogger
+    from pythonjsonlogger import json as jsonlogger
 except ImportError as e:  # pragma: no cover
-    jsonlogger = e
+    try:
+        from pythonjsonlogger import jsonlogger
+    except ImportError:  # pragma: no cover
+        jsonlogger = e.with_traceback(None)
 
 
 def run_app(args: argparse.Namespace):

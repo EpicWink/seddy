@@ -1,2 +1,12 @@
-black ~= 22.0
-isort ~= 5.0
+# Project
+-e .
+
+# Testing
+-r ./tests/requirements.txt
+
+# Linting
+black >= 22.0, < 27.0
+isort >= 5.0, < 9.0
+
+# Documentation
+-r ./docs/requirements.txt

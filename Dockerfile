@@ -1,3 +1,4 @@
 FROM python:alpine
-RUN pip install seddy coloredlogs pyyaml python-json-logger
+ARG SEDDY_REQUIREMENT='> 0.0'
+RUN pip install "seddy $SEDDY_REQUIREMENT" coloredlogs pyyaml python-json-logger
 ENTRYPOINT ["seddy"]

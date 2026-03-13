@@ -7,7 +7,8 @@ We'll use `moto <https://github.com/spulec/moto>`_, a tool which mocks out SWF.
 
 .. warning::
 
-   ``moto`` v1.3.16 is required to correctly mock SWF (however, unlike using AWS for
+   ``moto`` v1.3.16 or later is required to correctly mock SWF (however, unlike using
+   AWS for
    real, task-polling returns instantly).
 
 Set-up
@@ -21,11 +22,11 @@ Install `Moto <http://docs.getmoto.org/en/latest/>`_,
 
    pip install moto[server,swf] pyyaml seddy
 
-.. _env-vars:
-
 You are free to use whichever method you like to install AWS CLI, for example installing
 v1 via pip (``pip install awscli``) or using the Docker image (``docker pull
 amazon/aws-cli:latest``, then ``alias aws='docker run --rm amazon/aws-cli:latest'``)
+
+.. _env-vars:
 
 Environment variables
 ^^^^^^^^^^^^^^^^^^^^^

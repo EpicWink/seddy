@@ -28,7 +28,10 @@ def setup_logging(verbose: int, json_logging: bool = False):
     fmt = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
 
     if json_logging:
-        from pythonjsonlogger import jsonlogger
+        try:
+            from pythonjsonlogger import json as jsonlogger
+        except ImportError:
+            from pythonjsonlogger import jsonlogger
 
         handler = lg.StreamHandler()
         formatter = jsonlogger.JsonFormatter(
@@ -67,7 +70,7 @@ def setup_logging(verbose: int, json_logging: bool = False):
     lg.root.setLevel(level)
 
 
-def get_swf_client():
+def get_swf_client(socket_read_timeout: float = None):
     """Create an SWF client.
 
     Uses ``AWS_SWF_ENDPOINT_URL`` from environment for the endpoint URL.
@@ -77,8 +80,14 @@ def get_swf_client():
     """
 
     import boto3
+    import botocore.config
+
+    config = botocore.config.Config(retries=dict(mode="adaptive"))
+
+    if socket_read_timeout is not None:
+        config.read_timeout = socket_read_timeout
 
     logger.debug(
         "Creating SWF client with endpoint URL: %s", AWS_SWF_ENDPOINT_URL or "<default>"
     )
-    return boto3.client("swf", endpoint_url=AWS_SWF_ENDPOINT_URL)
+    return boto3.client("swf", endpoint_url=AWS_SWF_ENDPOINT_URL, config=config)

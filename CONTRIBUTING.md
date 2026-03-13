@@ -3,7 +3,7 @@ Thanks for wanting to help out!
 
 ## Environment installation
 ```bash
-python -m pip install -e . -r ./tests/requirements.txt -r ./dev.requirements.txt
+python -m pip install -r ./dev.requirements.txt
 ```
 
 ## Testing
