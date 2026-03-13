@@ -23,5 +23,5 @@ extensions = [
     "sphinx.ext.napoleon",
     "autodocsumm",
 ]
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
 master_doc = "index"  # support read-the-docs
