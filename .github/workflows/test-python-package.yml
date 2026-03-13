@@ -23,19 +23,16 @@ jobs:
           python-version: '3.7'
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
+        cache: pip
         python-version: ${{ matrix.python-version }}
     - name: Update pip
       run: pip install -U pip
-    - name: Install package
-      run: |
-        apt-get update && apt-get install -y git
-        pip --no-cache-dir install .
-    - name: Install dev requirements
-      run: pip install -r dev.requirements.txt
+    - name: Install dependencies
+      run: pip install --requirement ./tests/requirements.txt black isort .
     - name: Lint with black
       run: |
         black --check src/
@@ -43,7 +40,6 @@ jobs:
       run: isort --check src/
     - name: Test with pytest
       run: |
-        pip install -r tests/requirements.txt
         pytest -vvra --cov seddy --cov-report xml --cov-report term
     - name: Upload coverage
       uses: codecov/codecov-action@v5
