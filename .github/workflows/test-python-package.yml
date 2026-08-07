@@ -53,8 +53,3 @@ jobs:
     - name: Test with pytest
       run: |
         pytest -vvra --cov seddy --cov-report xml --cov-report term
-    - name: Upload coverage report
-      if: github.ref_name == 'master' || (
-        github.event_name == 'pull_request'
-        && github.event.pull_request.head.repo.full_name == github.repository
-        )
