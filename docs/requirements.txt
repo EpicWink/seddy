@@ -1,4 +1,4 @@
-sphinx >= 2.4, < 10.0
+sphinx >= 9.1.0, < 10.0
 furo
 autodocsumm
 importlib-metadata; python_version < "3.8"
