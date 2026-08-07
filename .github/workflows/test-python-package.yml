@@ -29,6 +29,9 @@ jobs:
         include:
         - os: ubuntu-22.04
           python-version: '3.7'
+    permissions:
+      contents: read
+      code-quality: write
 
     steps:
     - uses: actions/checkout@v6
@@ -49,7 +52,13 @@ jobs:
     - name: Test with pytest
       run: |
         pytest -vvra --cov seddy --cov-report xml --cov-report term
-    - name: Upload coverage
-      uses: codecov/codecov-action@v5
+    - name: Upload coverage report
+      if: github.ref_name == 'master' || (
+        github.event_name == 'pull_request'
+        && github.event.pull_request.head.repo.full_name == github.repository
+        )
+      uses: actions/upload-code-coverage@v1
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+        file: coverage.xml
+        language: Python
+        label: code-coverage/pytest
