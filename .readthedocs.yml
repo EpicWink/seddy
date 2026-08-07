@@ -1,6 +1,10 @@
 # Read the Docs configuration file
 version: 2
 
+build:
+  os: ubuntu-lts-latest
+  tools:
+    python: latest
 sphinx:
   configuration: docs/src/conf.py
 formats:

@@ -2,8 +2,6 @@
 [![Build status](
 https://github.com/EpicWink/seddy/workflows/test/badge.svg?branch=master)](
 https://github.com/EpicWink/seddy/actions?query=branch%3Amaster+workflow%3Atest)
-[![codecov](https://codecov.io/gh/EpicWink/seddy/branch/master/graph/badge.svg)](
-https://codecov.io/gh/EpicWink/seddy)
 [![Documentation Status](https://readthedocs.org/projects/seddy/badge/?version=latest)](
 https://seddy.readthedocs.io/en/latest/?badge=latest)
 [![PyPI - Version](https://img.shields.io/pypi/v/seddy?logo=pypi)](
@@ -36,11 +34,16 @@ What `seddy` doesn't do:
 pip3 install seddy
 ```
 
-Install extra packages for further functionality
-* Coloured logging: [`coloredlogs`](https://pypi.org/project/coloredlogs/)
-* YAML workflows specs file: [`pyyaml`](https://pypi.org/project/PyYAML/) or
-  [`ruamel.yaml`](https://pypi.org/project/ruamel.yaml/)
-* JSON-format logging:
+Specify
+[extras](https://packaging.python.org/en/latest/specifications/dependency-specifiers/#extras)
+for further functionality:
+
+* `seddy[colored-logging]`: coloured logging with
+  [`coloredlogs`](https://pypi.org/project/coloredlogs/)
+* `seddy[yaml]`: YAML workflows specs file via
+  [`pyyaml`](https://pypi.org/project/PyYAML/)
+  ([`ruamel.yaml`](https://pypi.org/project/ruamel.yaml/) also supported)
+* `seddy[json-logging]`: JSON-format logging with
   [`python-json-logger`](https://pypi.org/project/python-json-logger/)
 
 ## Usage
