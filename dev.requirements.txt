@@ -6,7 +6,7 @@
 
 # Linting
 black >= 22.0, < 27.0
-isort >= 5.0, < 9.0
+isort >= 7.0.0, < 9.0
 
 # Documentation
 -r ./docs/requirements.txt
