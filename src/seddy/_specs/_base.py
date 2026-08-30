@@ -5,6 +5,8 @@ import enum
 import typing as t
 import dataclasses
 
+import swf_typed
+
 
 class DeciderError(RuntimeError):
     """Misconfiguration of the decider."""
@@ -81,7 +83,7 @@ class DecisionsBuilder(metaclass=abc.ABCMeta):
         task: decision task
     """
 
-    def __init__(self, workflow: "Workflow", task: t.Dict[str, t.Any]):
+    def __init__(self, workflow: "Workflow", task: swf_typed.DecisionTask):
         self.workflow = workflow
         self.task = task
         self.decisions = []
@@ -165,7 +167,9 @@ class Workflow(metaclass=abc.ABCMeta):
         Useful for pre-calculation or other initialisation.
         """
 
-    def make_decisions(self, task: t.Dict[str, t.Any]) -> t.List[t.Dict[str, t.Any]]:
+    def make_decisions(
+        self, task: swf_typed.DecisionTask
+    ) -> t.List[swf_typed.Decision]:
         """Build decisions from workflow history.
 
         Args:
@@ -180,7 +184,7 @@ class Workflow(metaclass=abc.ABCMeta):
         return builder.decisions
 
 
-def make_decisions_on_error(exception: Exception) -> t.List[t.Dict[str, t.Any]]:
+def make_decisions_on_error(exception: Exception) -> t.List[swf_typed.Decision]:
     """Build workflow-fail decision on decider exception.
 
     Args:
@@ -190,12 +194,10 @@ def make_decisions_on_error(exception: Exception) -> t.List[t.Dict[str, t.Any]]:
         workflow-fail decision
     """
 
-    decision_attrs = {"reason": exception.__class__.__name__}
+    decision = swf_typed.FailWorkflowExecutionDecision(
+        reason=exception.__class__.__name__,
+    )
     message = str(exception)
     if message:
-        decision_attrs["details"] = message
-    decision = {
-        "decisionType": "FailWorkflowExecution",
-        "failWorkflowExecutionDecisionAttributes": decision_attrs,
-    }
+        decision.details = message
     return [decision]
