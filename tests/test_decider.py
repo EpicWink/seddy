@@ -1,11 +1,13 @@
 """Test ``seddy.decider``."""
 
 import os
+import datetime
 from concurrent import futures as cf
 from unittest import mock
 
 import moto
 import pytest
+import swf_typed
 from botocore import client as botocore_client
 
 from seddy import _specs as seddy_specs
@@ -59,115 +61,46 @@ class TestDecider:
         assert isinstance(instance.client, botocore_client.BaseClient)
         assert instance.identity == "abcd1234"
 
-    @mock_swf
-    def test_poll_for_decision_task(self, instance):
-        # Setup environment
-        instance.client.register_domain(
-            name="spam", workflowExecutionRetentionPeriodInDays="2"
-        )
-        instance.client.register_workflow_type(
-            domain="spam", name="bar", version="0.42"
-        )
-        resp = instance.client.start_workflow_execution(
-            domain="spam",
-            workflowId="1234",
-            workflowType={"name": "bar", "version": "0.42"},
-            executionStartToCloseTimeout="60",
-            taskList={"name": "eggs"},
-            taskStartToCloseTimeout="10",
-            childPolicy="REQUEST_CANCEL",
-        )
-
-        # Run function
-        res = instance._poll_for_decision_task()
-
-        # Check result
-        assert res == {
-            "ResponseMetadata": mock.ANY,
-            "events": [
-                {
-                    "eventId": 1,
-                    "eventTimestamp": mock.ANY,
-                    "eventType": "WorkflowExecutionStarted",
-                    "workflowExecutionStartedEventAttributes": {
-                        "workflowType": {"name": "bar", "version": "0.42"},
-                        "executionStartToCloseTimeout": "60",
-                        "taskList": {"name": "eggs"},
-                        "taskStartToCloseTimeout": "10",
-                        "childPolicy": "REQUEST_CANCEL",
-                    },
-                },
-                {
-                    "eventId": 2,
-                    "eventTimestamp": mock.ANY,
-                    "eventType": "DecisionTaskScheduled",
-                    "decisionTaskScheduledEventAttributes": {
-                        "startToCloseTimeout": "10",
-                        "taskList": {"name": "eggs"},
-                    },
-                },
-                {
-                    "eventId": 3,
-                    "eventTimestamp": mock.ANY,
-                    "eventType": "DecisionTaskStarted",
-                    "decisionTaskStartedEventAttributes": {
-                        "identity": instance.identity,
-                        "scheduledEventId": 2,
-                    },
-                },
-            ],
-            "startedEventId": 3,
-            "taskToken": mock.ANY,
-            "workflowExecution": {"runId": resp["runId"], "workflowId": "1234"},
-            "workflowType": {"name": "bar", "version": "0.42"},
-        }
-
     def test_get_workflow(self, instance, workflow_mocks):
         # Setup environment
         load_mock = mock.Mock(return_value=workflow_mocks)
         load_patch = mock.patch.object(seddy_specs_io, "load_workflows", load_mock)
 
         # Build input
-        task = {
-            "ResponseMetadata": mock.ANY,
-            "events": [
-                {
-                    "eventId": 1,
-                    "eventTimestamp": mock.ANY,
-                    "eventType": "WorkflowExecutionStarted",
-                    "workflowExecutionStartedEventAttributes": {
-                        "workflowType": {"name": "bar", "version": "0.42"},
-                        "executionStartToCloseTimeout": "60",
-                        "taskList": {"name": "eggs"},
-                        "taskStartToCloseTimeout": "10",
-                        "childPolicy": "REQUEST_CANCEL",
-                    },
-                },
-                {
-                    "eventId": 2,
-                    "eventTimestamp": mock.ANY,
-                    "eventType": "DecisionTaskScheduled",
-                    "decisionTaskScheduledEventAttributes": {
-                        "startToCloseTimeout": "10",
-                        "taskList": {"name": "eggs"},
-                    },
-                },
-                {
-                    "eventId": 3,
-                    "eventTimestamp": mock.ANY,
-                    "eventType": "DecisionTaskStarted",
-                    "decisionTaskStartedEventAttributes": {
-                        "identity": instance.identity,
-                        "scheduledEventId": 2,
-                    },
-                },
+        task = swf_typed.DecisionTask(
+            token=mock.ANY,
+            execution=swf_typed.ExecutionId(id="1234", run_id=mock.ANY),
+            workflow=swf_typed.WorkflowId(name="bar", version="0.42"),
+            decision_task_started_execution_history_event_id=3,
+            previous_decision_task_started_execution_history_event_id=0,
+            _execution_history_iter=[
+                swf_typed.WorkflowExecutionStartedEvent(
+                    id=1,
+                    occured=mock.ANY,
+                    workflow=swf_typed.WorkflowId(name="bar", version="0.42"),
+                    execution_configuration=swf_typed.PartialExecutionConfiguration(
+                        timeout=datetime.timedelta(seconds=60),
+                        decision_task_list="eggs",
+                        decision_task_timeout=datetime.timedelta(seconds=10),
+                        child_execution_policy_on_termination=(
+                            swf_typed.ChildExecutionTerminationPolicy.request_cancel
+                        ),
+                    ),
+                ),
+                swf_typed.DecisionTaskScheduledEvent(
+                    id=2,
+                    occured=mock.ANY,
+                    decision_task_list="eggs",
+                    decision_task_timeout=datetime.timedelta(seconds=10),
+                ),
+                swf_typed.DecisionTaskStartedEvent(
+                    id=3,
+                    occured=mock.ANY,
+                    decision_task_scheduled_event_id=2,
+                    decider_identity=instance.identity,
+                ),
             ],
-            "previousStartedEventId": 0,
-            "startedEventId": 3,
-            "taskToken": mock.ANY,
-            "workflowExecution": {"runId": mock.ANY, "workflowId": "1234"},
-            "workflowType": {"name": "bar", "version": "0.42"},
-        }
+        )
 
         # Run function
         with load_patch:
@@ -183,12 +116,14 @@ class TestDecider:
         load_patch = mock.patch.object(seddy_specs_io, "load_workflows", load_mock)
 
         # Build input
-        task = {
-            "ResponseMetadata": mock.ANY,
-            "taskToken": mock.ANY,
-            "workflowExecution": {"runId": mock.ANY, "workflowId": "1234"},
-            "workflowType": {"name": "bar", "version": "0.43"},
-        }
+        task = swf_typed.DecisionTask(
+            token=mock.ANY,
+            execution=swf_typed.ExecutionId(id="1234", run_id=mock.ANY),
+            workflow=swf_typed.WorkflowId(name="bar", version="0.43"),
+            decision_task_started_execution_history_event_id=3,
+            previous_decision_task_started_execution_history_event_id=0,
+            _execution_history_iter=[],
+        )
 
         # Run function
         with pytest.raises(seddy_decider.UnsupportedWorkflow) as e:
@@ -196,7 +131,7 @@ class TestDecider:
                 instance._get_workflow(task)
 
         # Check result
-        assert e.value.args[0] == {"name": "bar", "version": "0.43"}
+        assert e.value.args[0] == swf_typed.WorkflowId(name="bar", version="0.43")
 
     @mock_swf
     def test_respond_decision_task_completed(self, instance):
@@ -216,12 +151,16 @@ class TestDecider:
             taskStartToCloseTimeout="10",
             childPolicy="REQUEST_CANCEL",
         )
-        task = instance.client.poll_for_decision_task(
-            domain="spam", identity=instance.identity, taskList={"name": "eggs"}
+        task = swf_typed.request_decision_task(
+            task_list="eggs",
+            domain="spam",
+            decider_identity=instance.identity,
+            no_tasks_callback=lambda: spam,  # raise
+            client=instance.client,
         )
 
         # Build input
-        decisions = [{"decisionType": "CompleteWorkflowExecution"}]
+        decisions = [swf_typed.CompleteWorkflowExecutionDecision()]
 
         # Run function
         instance._respond_decision_task_completed(decisions, task)
